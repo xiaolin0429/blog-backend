@@ -1,0 +1,38 @@
+# Django and REST framework
+Django==4.2.9
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+
+# Database
+psycopg2-binary==2.9.9
+django-redis==5.4.0
+
+# Authentication
+djangorestframework-simplejwt==5.3.1
+
+# Search
+elasticsearch-dsl==8.11.0
+
+# File Storage
+django-storages==1.14.2
+minio==7.2.3
+
+# Task Queue
+celery==5.3.6
+
+# Development
+python-dotenv==1.0.0
+
+# API Features
+django-filter==23.5
+drf-yasg==1.21.6
+
+# Image Processing
+Pillow==10.1.0
+
+# Security
+django-guardian==2.4.0
+django-ratelimit==4.1.0
+
+# Common Dependencies
+packaging>=22.0 

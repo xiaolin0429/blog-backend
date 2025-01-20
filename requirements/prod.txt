@@ -1,0 +1,7 @@
+# Import base requirements
+-r base.txt
+
+# Production Tools
+gunicorn==21.2.0
+supervisor==4.2.5
+sentry-sdk==1.39.1 

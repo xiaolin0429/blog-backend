@@ -1,0 +1,23 @@
+# Import base requirements
+-r base.txt
+
+# Development Tools
+pytest==7.4.4
+pytest-django==4.7.0
+pytest-cov==4.1.0
+factory-boy==3.3.0
+black==23.12.1
+flake8==7.0.0
+mypy==1.8.0
+django-debug-toolbar==4.2.0
+
+# Security Check
+safety==2.3.4
+bandit==1.7.6
+
+# Git Hooks
+pre-commit==3.6.0
+
+# Documentation
+mkdocs==1.5.3
+mkdocs-material==9.5.3 
