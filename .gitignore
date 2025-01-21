@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
-venv/Lib/site-packages/pip/_internal/operations/build/
+build/
 develop-eggs/
 dist/
 downloads/
@@ -21,6 +21,7 @@ wheels/
 *.egg
 
 # Virtual Environment
+.venv/
 venv/
 ENV/
 
@@ -29,6 +30,7 @@ ENV/
 .vscode/
 *.swp
 *.swo
+.cursorrules
 
 # Django
 *.log
@@ -46,6 +48,17 @@ static/
 .coverage
 htmlcov/
 .pytest_cache/
+allure-results/
+allure-reports/
+coverage.xml
+test-results/
+reports/
+*.html.json
+
+# Coverage reports
+coverage/
+.coverage.*
+*,cover
 
 # Celery
 celerybeat-schedule
