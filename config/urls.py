@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import RedirectView
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -40,14 +41,14 @@ schema_view = get_schema_view(
 api_v1_patterns = [
     path('auth/', include('apps.user.urls.auth')),
     path('user/', include('apps.user.urls.user')),
-    path('posts/', include('apps.post.urls.post')),
-    path('categories/', include('apps.post.urls.category')),
-    path('tags/', include('apps.post.urls.tag')),
-    path('comments/', include('apps.post.urls.comment')),
+    path('', include('apps.post.urls')),  # 使用post应用的主URLs
     path('plugin/', include('apps.plugin.urls')),
 ]
 
 urlpatterns = [
+    # 根路径重定向到Swagger文档
+    path('', RedirectView.as_view(url='/swagger/', permanent=False), name='index'),
+    
     path('admin/', admin.site.urls),
     
     # API endpoints

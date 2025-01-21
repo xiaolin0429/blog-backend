@@ -122,7 +122,7 @@ class PostListView(generics.ListCreateAPIView):
         # 正常的查询逻辑
         if self.request.user.is_staff:
             return Post.objects.all()
-        return Post.objects.filter(status=Post.Status.PUBLISHED)
+        return Post.objects.filter(status='published')
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -150,7 +150,7 @@ class PostDetailView(generics.RetrieveAPIView):
         # 正常的查询逻辑
         if self.request.user.is_staff:
             return Post.objects.all()
-        return Post.objects.filter(status=Post.Status.PUBLISHED)
+        return Post.objects.filter(status='published')
 
 class PostUpdateView(generics.UpdateAPIView):
     """文章更新视图"""

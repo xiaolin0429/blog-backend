@@ -8,12 +8,12 @@ User = get_user_model()
 @pytest.fixture
 def register_url():
     """返回注册URL"""
-    return reverse('user:register')
+    return '/api/v1/user/register/'
 
 @pytest.fixture
 def profile_url():
     """返回用户资料URL"""
-    return reverse('user:profile')
+    return '/api/v1/user/me/'
 
 @pytest.mark.django_db
 class TestUserView:

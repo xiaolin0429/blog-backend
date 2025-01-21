@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
+venv/Lib/site-packages/pip/_internal/operations/build/
 develop-eggs/
 dist/
 downloads/
@@ -21,7 +21,6 @@ wheels/
 *.egg
 
 # Virtual Environment
-.venv/
 venv/
 ENV/
 
@@ -48,17 +47,6 @@ static/
 .coverage
 htmlcov/
 .pytest_cache/
-allure-results/
-allure-reports/
-coverage.xml
-test-results/
-reports/
-*.html.json
-
-# Coverage reports
-coverage/
-.coverage.*
-*,cover
 
 # Celery
 celerybeat-schedule
@@ -66,4 +54,20 @@ celerybeat.pid
 
 # Others
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Test reports
+allure-results/
+allure-reports/
+htmlcov/
+.coverage
+coverage.xml
+.pytest_cache/
+test-results/
+reports/
+*.html.json
+
+# Coverage reports
+coverage/
+.coverage.*
+*,cover 
