@@ -8,22 +8,22 @@ User = get_user_model()
 @pytest.fixture
 def login_url():
     """返回登录URL"""
-    return reverse('user:login')
+    return reverse('auth:login')
 
 @pytest.fixture
 def refresh_url():
     """返回刷新令牌URL"""
-    return reverse('user:token_refresh')
+    return reverse('auth:token_refresh')
 
 @pytest.fixture
 def logout_url():
     """返回登出URL"""
-    return reverse('user:logout')
+    return reverse('auth:logout')
 
 @pytest.fixture
 def change_password_url():
     """返回修改密码URL"""
-    return reverse('user:password_change')
+    return reverse('auth:password_change')
 
 @pytest.mark.django_db
 class TestAuthView:

@@ -13,7 +13,7 @@ def password_change_data():
     return {
         'old_password': 'Test123456',
         'new_password': 'NewTest123456',
-        'new_password2': 'NewTest123456'
+        'confirm_password': 'NewTest123456'
     }
 
 @pytest.fixture
@@ -50,13 +50,13 @@ class TestAuthSerializer:
     def test_password_change_serializer_password_mismatch(self, test_user, password_change_data, mock_request):
         """测试密码修改序列化器-新密码不匹配"""
         data = password_change_data.copy()
-        data['new_password2'] = 'Different123456'
+        data['confirm_password'] = 'Different123456'
         serializer = PasswordChangeSerializer(
             data=data,
             context={'request': mock_request}
         )
         assert not serializer.is_valid()
-        assert 'new_password' in serializer.errors
+        assert 'new_password' in serializer.errors or 'confirm_password' in serializer.errors
 
     def test_logout_serializer(self):
         """测试登出序列化器"""
