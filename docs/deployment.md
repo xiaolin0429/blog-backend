@@ -1,4 +1,4 @@
-# 项目部署文档
+# 博客后端系统部署文档
 
 ## 1. 环境要求
 
@@ -11,11 +11,10 @@
 
 ## 2. 安装依赖
 
-> 注意：所有命令均在项目根目录 `/backend` 下执行
-
 ```bash
-# 进入项目根目录
-cd backend
+# 克隆项目
+git clone https://github.com/xiaolin0429/blog-backend
+cd blog-backend
 
 # 创建虚拟环境
 python -m venv .venv
@@ -65,7 +64,7 @@ https://pypi.douban.com/simple
 
 ## 3. 环境配置
 
-在项目根目录 `/backend` 创建 `.env` 文件，配置以下环境变量：
+在项目根目录创建 `.env` 文件，配置以下环境变量：
 
 ```env
 # Django
@@ -135,8 +134,6 @@ pytest --cov
 
 ## 5. 数据库迁移
 
-> 在项目根目录 `/backend` 下执行：
-
 ```bash
 # 创建数据库迁移
 python manage.py makemigrations
@@ -150,8 +147,6 @@ python manage.py showmigrations
 
 ## 6. 创建超级用户
 
-> 在项目根目录 `/backend` 下执行：
-
 ```bash
 python manage.py createsuperuser
 ```
@@ -164,6 +159,9 @@ python manage.py collectstatic --noinput
 
 # 创建媒体文件目录
 mkdir -p media
+# Windows
+icacls media /grant Users:(OI)(CI)F
+# Linux/Mac
 chmod 755 media
 
 # 确保MinIO bucket存在
@@ -174,12 +172,7 @@ python manage.py check_storage
 
 ### 开发环境
 
-> 所有命令均在项目根目录 `/backend` 下执行
-
 ```bash
-# 进入项目目录
-cd /path/to/backend
-
 # 激活虚拟环境
 # Windows
 .venv\Scripts\activate
@@ -187,7 +180,7 @@ cd /path/to/backend
 source .venv/bin/activate
 
 # 启动开发服务器（默认端口8000）
-python manage.py runserver 0.0.0.0:8000
+python manage.py runserver
 
 # 启动Celery Worker（确保Redis已启动）
 # Windows
@@ -198,8 +191,8 @@ celery -A config worker -l info
 # 启动Celery Beat（定时任务）
 celery -A config beat -l info
 
-# 启动文档服务（可选，默认端口8000）
-cd /path/to/backend/docs
+# 启动文档服务（可选，默认端口8001）
+cd docs
 mkdocs serve -a 0.0.0.0:8001
 ```
 
@@ -208,66 +201,60 @@ mkdocs serve -a 0.0.0.0:8001
 1. 使用 Gunicorn 作为 WSGI 服务器：
 
 ```bash
-# 进入项目目录
-cd /path/to/backend
-
-# 激活虚拟环境
-source /path/to/backend/.venv/bin/activate
-
 # 启动Gunicorn
-/path/to/backend/.venv/bin/gunicorn config.wsgi:application \
+.venv/bin/gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers 4 \
     --worker-class=gevent \
     --timeout 60 \
-    --access-logfile /var/log/blog/gunicorn-access.log \
-    --error-logfile /var/log/blog/gunicorn-error.log \
-    --pid /var/run/blog/gunicorn.pid \
+    --access-logfile logs/gunicorn-access.log \
+    --error-logfile logs/gunicorn-error.log \
+    --pid logs/gunicorn.pid \
     --daemon
 ```
 
 2. 使用 Supervisor 管理进程：
 
-> 配置文件路径：`/etc/supervisor/conf.d/blog.conf`
+> 配置文件路径：`supervisor/blog.conf`
 
 ```ini
-[program:blog]
-command=/path/to/backend/.venv/bin/gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --worker-class=gevent --timeout 60
-directory=/path/to/backend
-user=www-data
+[program:blog-backend]
+command=%(ENV_VIRTUAL_ENV)s/bin/gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --worker-class=gevent --timeout 60
+directory=%(here)s
+user=%(ENV_USER)s
 autostart=true
 autorestart=true
 redirect_stderr=true
-stdout_logfile=/var/log/blog/gunicorn.log
-stderr_logfile=/var/log/blog/gunicorn-error.log
-environment=DJANGO_SETTINGS_MODULE="config.settings.production",PATH="/path/to/backend/.venv/bin:%(ENV_PATH)s"
+stdout_logfile=logs/gunicorn.log
+stderr_logfile=logs/gunicorn-error.log
+environment=DJANGO_SETTINGS_MODULE="config.settings.production"
 
 [program:blog-celery]
-command=/path/to/backend/.venv/bin/celery -A config worker -l info
-directory=/path/to/backend
-user=www-data
+command=%(ENV_VIRTUAL_ENV)s/bin/celery -A config worker -l info
+directory=%(here)s
+user=%(ENV_USER)s
 numprocs=1
 autostart=true
 autorestart=true
 redirect_stderr=true
-stdout_logfile=/var/log/blog/celery.log
-stderr_logfile=/var/log/blog/celery-error.log
-environment=DJANGO_SETTINGS_MODULE="config.settings.production",PATH="/path/to/backend/.venv/bin:%(ENV_PATH)s"
+stdout_logfile=logs/celery.log
+stderr_logfile=logs/celery-error.log
+environment=DJANGO_SETTINGS_MODULE="config.settings.production"
 
 [program:blog-celerybeat]
-command=/path/to/backend/.venv/bin/celery -A config beat -l info
-directory=/path/to/backend
-user=www-data
+command=%(ENV_VIRTUAL_ENV)s/bin/celery -A config beat -l info
+directory=%(here)s
+user=%(ENV_USER)s
 numprocs=1
 autostart=true
 autorestart=true
 redirect_stderr=true
-stdout_logfile=/var/log/blog/celerybeat.log
-stderr_logfile=/var/log/blog/celerybeat-error.log
-environment=DJANGO_SETTINGS_MODULE="config.settings.production",PATH="/path/to/backend/.venv/bin:%(ENV_PATH)s"
+stdout_logfile=logs/celerybeat.log
+stderr_logfile=logs/celerybeat-error.log
+environment=DJANGO_SETTINGS_MODULE="config.settings.production"
 
-[group:blog]
-programs=blog,blog-celery,blog-celerybeat
+[group:blog-backend]
+programs=blog-backend,blog-celery,blog-celerybeat
 priority=999
 ```
 
@@ -275,109 +262,30 @@ priority=999
 
 ```bash
 # 创建日志目录
-sudo mkdir -p /var/log/blog
-sudo chown -R www-data:www-data /var/log/blog
+mkdir -p logs
+# Windows
+icacls logs /grant Users:(OI)(CI)F
+# Linux/Mac
+chmod -R 755 logs
 
-# 创建pid目录
-sudo mkdir -p /var/run/blog
-sudo chown -R www-data:www-data /var/run/blog
+# 启动supervisor
+supervisord -c supervisor/blog.conf
 
 # 重新加载配置
-sudo supervisorctl reread
-sudo supervisorctl update
+supervisorctl -c supervisor/blog.conf reread
+supervisorctl -c supervisor/blog.conf update
 
 # 启动所有服务
-sudo supervisorctl start blog:*
+supervisorctl -c supervisor/blog.conf start blog-backend:*
 
 # 停止所有服务
-sudo supervisorctl stop blog:*
+supervisorctl -c supervisor/blog.conf stop blog-backend:*
 
 # 重启所有服务
-sudo supervisorctl restart blog:*
+supervisorctl -c supervisor/blog.conf restart blog-backend:*
 
 # 查看服务状态
-sudo supervisorctl status blog:*
-```
-
-4. Nginx配置（支持HTTPS）：
-
-> 配置文件路径：`/etc/nginx/sites-available/blog.conf`
-
-```nginx
-server {
-    listen 80;
-    server_name example.com;
-    return 301 https://$server_name$request_uri;  # 强制HTTPS
-}
-
-server {
-    listen 443 ssl http2;
-    server_name example.com;
-
-    # SSL配置
-    ssl_certificate /path/to/cert.pem;
-    ssl_certificate_key /path/to/key.pem;
-    ssl_session_timeout 1d;
-    ssl_session_cache shared:SSL:50m;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
-
-    # 安全头部
-    add_header Strict-Transport-Security "max-age=31536000" always;
-    add_header X-Frame-Options DENY;
-    add_header X-Content-Type-Options nosniff;
-    add_header X-XSS-Protection "1; mode=block";
-
-    # 静态文件和媒体文件
-    location /static/ {
-        alias /path/to/backend/static/;
-        expires 30d;
-        add_header Cache-Control "public, no-transform";
-    }
-
-    location /media/ {
-        alias /path/to/backend/media/;
-        expires 30d;
-        add_header Cache-Control "public, no-transform";
-    }
-
-    # API文档
-    location /api/docs/ {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    # 主应用
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_redirect off;
-        proxy_buffering off;
-        proxy_connect_timeout 60s;
-        proxy_read_timeout 60s;
-        proxy_send_timeout 60s;
-    }
-}
-```
-
-5. Nginx 管理命令：
-
-```bash
-# 创建符号链接
-sudo ln -s /etc/nginx/sites-available/blog.conf /etc/nginx/sites-enabled/
-
-# 检查配置
-sudo nginx -t
-
-# 重启Nginx
-sudo systemctl restart nginx
-
-# 查看Nginx状态
-sudo systemctl status nginx
+supervisorctl -c supervisor/blog.conf status blog-backend:*
 ```
 
 ## 9. 安全配置
@@ -388,6 +296,11 @@ sudo systemctl status nginx
 python manage.py check --deploy
 
 # 检查文件权限
+# Windows
+icacls .env /inheritance:r /grant:r "%USERNAME%":F
+icacls static /grant Users:(OI)(CI)R
+icacls media /grant Users:(OI)(CI)R
+# Linux/Mac
 chmod 600 .env
 chmod -R 755 static
 chmod -R 755 media
@@ -405,12 +318,17 @@ chmod -R 755 media
 3. 备份策略：
 ```bash
 # 数据库备份
-pg_dump blog_db > backup_$(date +%Y%m%d).sql
+pg_dump blog_db > backup/db_$(date +%Y%m%d).sql
 
 # 媒体文件备份
+# Windows
+xcopy /E /I media backup\media
+# Linux/Mac
 rsync -av media/ backup/media/
 
-# 设置定时备份（crontab）
+# 设置定时备份
+# Windows：使用任务计划程序
+# Linux/Mac：使用crontab
 0 2 * * * /path/to/backup_script.sh
 ```
 
@@ -419,19 +337,23 @@ rsync -av media/ backup/media/
 1. 系统监控：
 ```bash
 # 检查服务状态
-supervisorctl status
+supervisorctl -c supervisor/blog.conf status
 
 # 检查日志
-tail -f /var/log/blog/*.log
+# Windows
+type logs\*.log
+# Linux/Mac
+tail -f logs/*.log
 
 # 检查系统资源
-htop
+# Windows：任务管理器
+# Linux/Mac：htop
 ```
 
 2. 应用监控：
 ```bash
 # 检查API响应时间
-curl -w "%{time_total}\n" -s http://localhost/health-check
+curl -w "%{time_total}\n" -s http://localhost:8000/health-check
 
 # 检查数据库连接
 python manage.py dbshell
@@ -460,6 +382,7 @@ pip install -r requirements/base.txt --upgrade
 4. 文档维护：
 ```bash
 # 构建文档
+cd docs
 mkdocs build
 
 # 部署文档（如果使用GitHub Pages）

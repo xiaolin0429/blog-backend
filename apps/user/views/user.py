@@ -93,11 +93,14 @@ class PasswordChangeView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = PasswordChangeSerializer
 
-    def post(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
+        """修改密码"""
         serializer = self.get_serializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+            user = request.user
+            user.set_password(serializer.validated_data['new_password'])
+            user.save()
             return success_response(message="密码修改成功")
         except Exception as e:
             error_data = None

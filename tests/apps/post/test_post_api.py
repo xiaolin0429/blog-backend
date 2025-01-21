@@ -1,17 +1,25 @@
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+from django.contrib.auth import get_user_model
 
 from apps.post.models import Post
 from tests.apps.post.factories import PostFactory
 
+User = get_user_model()
 
 class PostAPITests(APITestCase):
     def setUp(self):
         """测试前的初始化工作"""
-        self.post = PostFactory()
-        self.list_url = reverse('post-list')
-        self.detail_url = reverse('post-detail', args=[self.post.id])
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.client.force_authenticate(user=self.user)
+        self.post = PostFactory(author=self.user)
+        self.list_url = '/api/v1/posts/'
+        self.detail_url = f'/api/v1/posts/{self.post.id}/'
 
     def test_list_posts(self):
         """测试获取文章列表"""
@@ -28,11 +36,11 @@ class PostAPITests(APITestCase):
     def test_create_post(self):
         """测试创建新文章"""
         data = {
-            'title': 'Test Post',
-            'content': 'Test Content',
-            'status': Post.Status.PUBLISHED
+            'title': '测试文章',
+            'content': '测试内容',
+            'status': 'published'
         }
         response = self.client.post(self.list_url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Post.objects.count(), 2)
-        self.assertEqual(response.data['title'], 'Test Post') 
+        self.assertEqual(response.data['title'], '测试文章') 
