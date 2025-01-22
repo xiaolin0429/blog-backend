@@ -14,9 +14,12 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      
     services:
       postgres:
-        image: postgres:14
+        image: postgres:14.10
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -29,7 +32,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       redis:
-        image: redis:6
+        image: redis:6.2.13
         ports:
           - 6379:6379
         options: >-
@@ -39,15 +42,17 @@ jobs:
           --health-retries 5
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout Repository
+      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       with:
         fetch-depth: 0
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435 # v4.5.0
       with:
         python-version: '3.10'
         cache: 'pip'
+        check-latest: true
         
     - name: Install Dependencies
       run: |
@@ -64,7 +69,7 @@ jobs:
         python -m pytest tests/ --alluredir=./allure-results --clean-alluredir
         
     - name: Get Allure history
-      uses: actions/checkout@v3
+      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       if: always()
       continue-on-error: true
       with:
@@ -80,9 +85,13 @@ jobs:
         keep_reports: 20
         
     - name: Deploy report to Github Pages
-      if: always()
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_branch: gh-pages
-        publish_dir: allure-history 
+        publish_dir: allure-history
+        full_commit_message: 'docs: update allure report'
+        user_name: 'github-actions[bot]'
+        user_email: 'github-actions[bot]@users.noreply.github.com'
+        force_orphan: true 
