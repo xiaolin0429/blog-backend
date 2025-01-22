@@ -20,7 +20,7 @@ class Post(models.Model):
     status = models.CharField(_('状态'), max_length=10, choices=STATUS_CHOICES, default='draft')
     views = models.PositiveIntegerField(_('浏览量'), default=0)
     likes = models.PositiveIntegerField(_('点赞数'), default=0)
-    created_at = models.DateTimeField(_('创建时间'), auto_now_add=True)
+    created_at = models.DateTimeField(_('创建时间'), default=timezone.now)
     updated_at = models.DateTimeField(_('更新时间'), auto_now=True)
     published_at = models.DateTimeField(_('发布时间'), null=True, blank=True)
     deleted_at = models.DateTimeField(_('删除时间'), null=True, blank=True)

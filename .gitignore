@@ -50,6 +50,10 @@ media/
 static/
 staticfiles/
 
+# 注意：migrations 目录应该被版本控制
+# 但是 migrations 目录下的 __pycache__ 不应该被版本控制
+**/migrations/__pycache__/
+
 # Environment variables
 .env
 .env.local

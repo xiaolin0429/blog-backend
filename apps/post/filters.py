@@ -33,25 +33,31 @@ class CommentFilter(filters.FilterSet):
     def filter_start_date(self, queryset, name, value):
         """过滤开始日期"""
         if value:
-            # 将日期转换为datetime，设置时间为当天的开始（00:00:00）
-            start_datetime = timezone.make_aware(
-                datetime.combine(value, datetime.min.time())
-            )
-            logger.debug(f"Filtering comments after {start_datetime}")
-            filtered_queryset = queryset.filter(created_at__gte=start_datetime)
-            logger.debug(f"Found {filtered_queryset.count()} comments after {start_datetime}")
-            return filtered_queryset
+            try:
+                # 将日期转换为datetime，设置时间为当天的开始（00:00:00）
+                start_datetime = timezone.make_aware(
+                    datetime.combine(value, datetime.min.time())
+                )
+                logger.debug(f"Filtering comments after {start_datetime}")
+                queryset = queryset.filter(created_at__gte=start_datetime)
+                logger.debug(f"Found {queryset.count()} comments after {start_datetime}")
+                return queryset
+            except Exception as e:
+                logger.error(f"Error filtering start date: {e}")
         return queryset
 
     def filter_end_date(self, queryset, name, value):
         """过滤结束日期"""
         if value:
-            # 将日期转换为datetime，设置时间为当天的结束（23:59:59.999999）
-            end_datetime = timezone.make_aware(
-                datetime.combine(value, datetime.max.time())
-            )
-            logger.debug(f"Filtering comments before {end_datetime}")
-            filtered_queryset = queryset.filter(created_at__lte=end_datetime)
-            logger.debug(f"Found {filtered_queryset.count()} comments before {end_datetime}")
-            return filtered_queryset
+            try:
+                # 将日期转换为datetime，设置时间为当天的结束（23:59:59.999999）
+                end_datetime = timezone.make_aware(
+                    datetime.combine(value, datetime.max.time())
+                )
+                logger.debug(f"Filtering comments before {end_datetime}")
+                queryset = queryset.filter(created_at__lte=end_datetime)
+                logger.debug(f"Found {queryset.count()} comments before {end_datetime}")
+                return queryset
+            except Exception as e:
+                logger.error(f"Error filtering end date: {e}")
         return queryset 

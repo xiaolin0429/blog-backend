@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 from apps.post.models import Post, Category, Tag
+from django.utils import timezone
 
 @pytest.mark.django_db
 class TestPostListView:
@@ -161,22 +162,26 @@ class TestPostListView:
 
     def test_order_posts(self, normal_user, api_client):
         """测试文章排序"""
-        # 创建两篇文章
-        Post.objects.create(
+        base_time = timezone.now()
+        
+        # 创建两篇文章，确保创建时间有间隔
+        post1 = Post.objects.create(
             title='文章1',
             content='内容1',
             author=normal_user,
             views=10,
             likes=5,
-            status='published'
+            status='published',
+            created_at=base_time - timezone.timedelta(hours=1)
         )
-        Post.objects.create(
+        post2 = Post.objects.create(
             title='文章2',
             content='内容2',
             author=normal_user,
             views=20,
             likes=15,
-            status='published'
+            status='published',
+            created_at=base_time
         )
         
         api_client.force_authenticate(user=normal_user)
@@ -190,4 +195,10 @@ class TestPostListView:
         # 按点赞数排序
         response = api_client.get(f'{url}?ordering=-likes')
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['results'][0]['title'] == '文章2' 
+        assert response.data['results'][0]['title'] == '文章2'
+        
+        # 按创建时间排序
+        response = api_client.get(f'{url}?ordering=-created_at')
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['results'][0]['title'] == '文章2'
+        assert response.data['results'][1]['title'] == '文章1' 
