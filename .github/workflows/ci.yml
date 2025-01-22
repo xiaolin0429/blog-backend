@@ -14,9 +14,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      
+    
     services:
       postgres:
         image: postgres:14.10
