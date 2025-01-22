@@ -60,7 +60,7 @@ jobs:
         DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
         REDIS_URL: redis://localhost:6379/0
       run: |
-        pytest --alluredir=./allure-results
+        python -m pytest tests/ --alluredir=./allure-results --clean-alluredir
         
     - name: Get Allure history
       uses: actions/checkout@v3
