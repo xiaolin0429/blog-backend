@@ -3,35 +3,105 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
+from apps.core.response import success_response, error_response
 from ..models import Category
 from ..serializers import CategorySerializer
+from django.http import Http404
 
 class CategoryListView(generics.ListCreateAPIView):
     """分类列表视图"""
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticated]
     filterset_fields = ['parent']
     search_fields = ['name', 'description']
     ordering_fields = ['order', 'created_at']
     ordering = ['order', 'id']
 
-class CategoryCreateView(generics.CreateAPIView):
-    """分类创建视图"""
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return []
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        parent = self.request.query_params.get('parent')
+        if parent:
+            # 如果指定了父分类，只返回该父分类下的子分类
+            queryset = queryset.filter(parent_id=parent)
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return success_response(data=serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            return success_response(data=serializer.data)
+        except Exception as e:
+            error_data = None
+            if hasattr(e, 'detail'):
+                error_data = {"errors": e.detail}
+            return error_response(
+                code=400,
+                message="创建分类失败",
+                data=error_data
+            )
+
+class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """分类详情视图"""
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [IsAuthenticated]
 
-class CategoryUpdateView(generics.UpdateAPIView):
-    """分类更新视图"""
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticated]
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            return success_response(data=serializer.data)
+        except Category.DoesNotExist:
+            return error_response(
+                code=404,
+                message="分类不存在"
+            )
 
-class CategoryDeleteView(generics.DestroyAPIView):
-    """分类删除视图"""
-    queryset = Category.objects.all()
-    permission_classes = [IsAuthenticated]
+    def update(self, request, *args, **kwargs):
+        try:
+            partial = kwargs.pop('partial', False)
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            return success_response(data=serializer.data)
+        except (Category.DoesNotExist, Http404):
+            return error_response(
+                code=404,
+                message="分类不存在"
+            )
+        except Exception as e:
+            error_data = None
+            if hasattr(e, 'detail'):
+                error_data = {"errors": e.detail}
+            return error_response(
+                code=400,
+                message="更新分类失败",
+                data=error_data
+            )
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            self.perform_destroy(instance)
+            return success_response(message="分类已删除")
+        except (Category.DoesNotExist, Http404):
+            return error_response(
+                code=404,
+                message="分类不存在",
+                status_code=status.HTTP_200_OK
+            )
 
 class CategoryQuickCreateView(APIView):
     """快速创建分类视图"""
@@ -42,23 +112,23 @@ class CategoryQuickCreateView(APIView):
         parent_id = request.data.get('parent')
         
         if not name:
-            return Response(
-                {'error': '分类名称不能为空'},
-                status=status.HTTP_400_BAD_REQUEST
+            return error_response(
+                code=400,
+                message="分类名称不能为空"
             )
         
         # 检查名称长度
         if len(name) < 2 or len(name) > 50:
-            return Response(
-                {'error': '分类名称长度必须在2-50个字符之间'},
-                status=status.HTTP_400_BAD_REQUEST
+            return error_response(
+                code=400,
+                message="分类名称长度必须在2-50个字符之间"
             )
         
         # 检查是否已存在
         if Category.objects.filter(name=name).exists():
-            return Response(
-                {'error': '分类名称已存在'},
-                status=status.HTTP_409_CONFLICT
+            return error_response(
+                code=409,
+                message="分类名称已存在"
             )
         
         # 检查父分类是否存在
@@ -67,9 +137,9 @@ class CategoryQuickCreateView(APIView):
             try:
                 parent = Category.objects.get(id=parent_id)
             except Category.DoesNotExist:
-                return Response(
-                    {'error': '父分类不存在'},
-                    status=status.HTTP_404_NOT_FOUND
+                return error_response(
+                    code=404,
+                    message="父分类不存在"
                 )
         
         # 创建分类
@@ -78,16 +148,10 @@ class CategoryQuickCreateView(APIView):
             parent=parent
         )
         
-        return Response({
-            'code': 200,
-            'message': 'success',
-            'data': {
-                'id': category.id,
-                'name': category.name,
-                'parent': parent.id if parent else None,
-                'parent_name': parent.name if parent else None,
-                'created_at': category.created_at.isoformat()
-            },
-            'timestamp': timezone.now().isoformat(),
-            'requestId': request.META.get('HTTP_X_REQUEST_ID', '')
+        return success_response(data={
+            'id': category.id,
+            'name': category.name,
+            'parent': parent.id if parent else None,
+            'parent_name': parent.name if parent else None,
+            'created_at': category.created_at.isoformat()
         }) 

@@ -39,8 +39,7 @@ schema_view = get_schema_view(
 
 # API URL patterns
 api_v1_patterns = [
-    path('auth/', include('apps.user.urls.auth')),
-    path('user/', include('apps.user.urls.user')),
+    path('user/', include('apps.user.urls')),  # 包含用户应用的所有URLs
     path('', include('apps.post.urls')),  # 使用post应用的主URLs
     path('plugin/', include('apps.plugin.urls')),
 ]

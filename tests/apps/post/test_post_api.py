@@ -17,7 +17,7 @@ class PostAPITests(APITestCase):
             password='testpass123'
         )
         self.client.force_authenticate(user=self.user)
-        self.post = PostFactory(author=self.user)
+        self.post = PostFactory(author=self.user, status='published')  # 设置为已发布状态
         self.list_url = '/api/v1/posts/'
         self.detail_url = f'/api/v1/posts/{self.post.id}/'
 
@@ -31,7 +31,7 @@ class PostAPITests(APITestCase):
         """测试获取单个文章详情"""
         response = self.client.get(self.detail_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['id'], self.post.id)
+        self.assertEqual(response.data['data']['id'], self.post.id)  # 从 data 字段中获取 id
 
     def test_create_post(self):
         """测试创建新文章"""
@@ -41,6 +41,7 @@ class PostAPITests(APITestCase):
             'status': 'published'
         }
         response = self.client.post(self.list_url, data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)  # 改为期望 200
+        self.assertEqual(response.data['code'], 200)  # 检查业务状态码
         self.assertEqual(Post.objects.count(), 2)
-        self.assertEqual(response.data['title'], '测试文章') 
+        self.assertEqual(response.data['data']['title'], '测试文章')  # 从 data 字段中获取 title 

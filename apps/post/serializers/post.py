@@ -41,11 +41,14 @@ class PostDetailSerializer(TimezoneSerializerMixin, serializers.ModelSerializer)
 
 class PostCreateUpdateSerializer(TimezoneSerializerMixin, serializers.ModelSerializer):
     """文章创建和更新序列化器"""
+    author = serializers.PrimaryKeyRelatedField(read_only=True)
+    author_username = serializers.CharField(source='author.username', read_only=True)
+    
     class Meta:
         model = Post
         fields = ['id', 'title', 'content', 'excerpt', 'category', 'tags', 
-                 'status', 'published_at']
-        read_only_fields = ['created_at', 'updated_at']
+                 'status', 'published_at', 'author', 'author_username']
+        read_only_fields = ['created_at', 'updated_at', 'author', 'author_username']
         extra_kwargs = {
             'category': {'required': False},  # 分类字段设为非必填
             'tags': {'required': False},      # 标签字段设为非必填

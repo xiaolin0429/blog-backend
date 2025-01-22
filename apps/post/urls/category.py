@@ -1,7 +1,6 @@
 from django.urls import path
 from ..views import (
-    CategoryListView, CategoryCreateView,
-    CategoryUpdateView, CategoryDeleteView,
+    CategoryListView, CategoryDetailView,
     CategoryQuickCreateView
 )
 
@@ -10,6 +9,6 @@ urlpatterns = [
     path('', CategoryListView.as_view(), name='category_list'),
     # POST 快速创建分类（简化版）
     path('quick-create/', CategoryQuickCreateView.as_view(), name='category_quick_create'),
-    # GET 获取详情，PUT 更新分类，DELETE 删除分类
-    path('<int:pk>/', CategoryUpdateView.as_view(), name='category_detail'),
+    # GET 获取详情，PUT/PATCH 更新分类，DELETE 删除分类
+    path('<int:pk>/', CategoryDetailView.as_view(), name='category_detail'),
 ] 

@@ -30,9 +30,6 @@ class LoginView(TokenObtainPairView):
         ),
         responses={
             200: LoginResponseSerializer,
-            401: '用户名或密码错误',
-            403: '账号已被锁定',
-            429: '登录尝试次数过多'
         }
     )
     def post(self, request, *args, **kwargs):
@@ -83,8 +80,7 @@ class LoginView(TokenObtainPairView):
                     error_msg = "登录尝试次数过多"
             return error_response(
                 code=error_code,
-                message=error_msg,
-                status_code=status.HTTP_401_UNAUTHORIZED
+                message=error_msg
             )
 
 class TokenRefreshView(BaseTokenRefreshView):
@@ -109,8 +105,7 @@ class TokenRefreshView(BaseTokenRefreshView):
                         'access': openapi.Schema(type=openapi.TYPE_STRING, description='新的访问令牌'),
                     }
                 )
-            ),
-            401: '刷新令牌无效或已过期'
+            )
         }
     )
     def post(self, request, *args, **kwargs):
@@ -124,8 +119,7 @@ class TokenRefreshView(BaseTokenRefreshView):
         except Exception as e:
             return error_response(
                 code=401,
-                message="刷新令牌无效或已过期",
-                status_code=status.HTTP_401_UNAUTHORIZED
+                message="刷新令牌无效或已过期"
             )
 
 class LogoutView(generics.GenericAPIView):
@@ -147,8 +141,7 @@ class LogoutView(generics.GenericAPIView):
                         'data': openapi.Schema(type=openapi.TYPE_OBJECT, description='响应数据'),
                     }
                 )
-            ),
-            401: '未授权或token已失效'
+            )
         },
         security=[{'Bearer': []}]
     )
@@ -164,8 +157,7 @@ class LogoutView(generics.GenericAPIView):
             except TokenError:
                 return error_response(
                     code=400,
-                    message="令牌无效或已过期",
-                    status_code=status.HTTP_400_BAD_REQUEST
+                    message="令牌无效或已过期"
                 )
         except Exception as e:
             error_msg = "登出失败"
@@ -173,6 +165,5 @@ class LogoutView(generics.GenericAPIView):
                 error_msg = str(e.detail)
             return error_response(
                 code=400,
-                message=error_msg,
-                status_code=status.HTTP_400_BAD_REQUEST
+                message=error_msg
             ) 

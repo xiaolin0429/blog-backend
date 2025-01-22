@@ -5,13 +5,11 @@ from .post import (
     PostRestoreView, PostPermanentDeleteView, PostEmptyTrashView
 )
 from .category import (
-    CategoryListView, CategoryCreateView,
-    CategoryUpdateView, CategoryDeleteView,
+    CategoryListView, CategoryDetailView,
     CategoryQuickCreateView
 )
 from .tag import (
-    TagListView, TagCreateView,
-    TagUpdateView, TagDeleteView,
+    TagListView, TagDetailView,
     TagBatchCreateView
 )
 from .comment import (
@@ -32,14 +30,10 @@ __all__ = [
     'PostPermanentDeleteView',
     'PostEmptyTrashView',
     'CategoryListView',
-    'CategoryCreateView',
-    'CategoryUpdateView',
-    'CategoryDeleteView',
+    'CategoryDetailView',
     'CategoryQuickCreateView',
     'TagListView',
-    'TagCreateView',
-    'TagUpdateView',
-    'TagDeleteView',
+    'TagDetailView',
     'TagBatchCreateView',
     'GlobalCommentListView',
     'CommentListCreateView',
