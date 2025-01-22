@@ -21,6 +21,13 @@ class PluginInstallSerializer(TimezoneSerializerMixin, serializers.ModelSerializ
 
 class PluginConfigSerializer(TimezoneSerializerMixin, serializers.ModelSerializer):
     """插件配置序列化器"""
+    config = serializers.DictField(required=True)
+
     class Meta:
         model = models.Plugin
-        fields = ['config'] 
+        fields = ['config']
+
+    def validate_config(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("配置必须是字典类型")
+        return value 

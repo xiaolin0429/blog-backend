@@ -1,6 +1,6 @@
 from rest_framework import generics, status, views
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission
 from django.db import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 from apps.core.response import success_response, error_response, APIResponse
@@ -9,31 +9,48 @@ from ..serializers import TagSerializer
 from ..serializers.tag import DuplicateTagError
 from django.utils import timezone
 import uuid
-from rest_framework import serializers
+from rest_framework import serializers, filters
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.exceptions import PermissionDenied
+
+class TagPagination(PageNumberPagination):
+    """标签分页类"""
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+    def get_paginated_response(self, data):
+        return {
+            'count': self.page.paginator.count,
+            'results': data
+        }
+
+class IsAuthenticatedOrReadOnly(BasePermission):
+    """自定义权限类，未认证用户只能读取"""
+    def has_permission(self, request, view):
+        if request.method == 'GET':
+            return True
+        if not request.user.is_authenticated:
+            raise PermissionDenied("您没有执行该操作的权限")
+        return True
 
 class TagListView(generics.ListCreateAPIView):
     """标签列表视图"""
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     search_fields = ['name']
+    ordering_fields = ['name', 'id']
     ordering = ['id']
-    pagination_class = None
-
-    def get_permissions(self):
-        """根据请求方法返回不同的权限"""
-        if self.request.method == 'GET':
-            return []
-        return [IsAuthenticated()]
+    pagination_class = TagPagination
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def list(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return success_response(code=401, message="Authentication credentials were not provided")
-            
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
-            return success_response(data=self.get_paginated_response(serializer.data).data)
+            return success_response(data=self.paginator.get_paginated_response(serializer.data))
         serializer = self.get_serializer(queryset, many=True)
         return success_response(data={'results': serializer.data, 'count': queryset.count()})
 
@@ -70,7 +87,7 @@ class TagDetailView(generics.RetrieveUpdateDestroyAPIView):
     """标签详情、更新和删除视图"""
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_object(self):
         """获取标签对象"""
@@ -82,19 +99,28 @@ class TagDetailView(generics.RetrieveUpdateDestroyAPIView):
         except ObjectDoesNotExist:
             return None
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if not instance:
+            return success_response(code=404, message="标签不存在")
+        serializer = self.get_serializer(instance)
+        return success_response(data=serializer.data)
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         if not instance:
             return success_response(code=404, message="标签不存在")
             
         try:
+            # 检查标签名称是否已存在
+            name = request.data.get('name')
+            if name and Tag.objects.filter(name=name).exclude(id=instance.id).exists():
+                return success_response(code=409, message="标签名称已存在")
+                
             serializer = self.get_serializer(instance, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
-            try:
-                self.perform_update(serializer)
-                return success_response(data=serializer.data)
-            except IntegrityError:
-                return success_response(code=409, message="标签名称已存在")
+            self.perform_update(serializer)
+            return success_response(data=serializer.data)
         except Exception as e:
             error_data = None
             if hasattr(e, 'detail'):
@@ -114,23 +140,23 @@ class TagBatchCreateView(generics.CreateAPIView):
     serializer_class = TagSerializer
     permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer):
-        try:
-            serializer.save()
-        except IntegrityError:
-            raise IntegrityError("标签名称已存在")
-
     def create(self, request, *args, **kwargs):
         try:
+            # 检查是否有重复的标签名称
+            names = [item.get('name') for item in request.data if isinstance(item, dict)]
+            if not names:
+                return success_response(code=400, message="标签数据格式不正确")
+                
+            existing_names = Tag.objects.filter(name__in=names).values_list('name', flat=True)
+            if existing_names:
+                return success_response(code=409, message="标签名称已存在")
+                
             serializer = self.get_serializer(data=request.data, many=True)
             serializer.is_valid(raise_exception=True)
-            try:
-                self.perform_create(serializer)
-                return success_response(data=serializer.data)
-            except IntegrityError:
-                return success_response(code=409, message="标签名称已存在")
+            self.perform_create(serializer)
+            return success_response(data=serializer.data)
+        except serializers.ValidationError as e:
+            error_data = {"errors": e.detail}
+            return success_response(code=400, message="标签名称不符合要求", data=error_data)
         except Exception as e:
-            error_data = None
-            if hasattr(e, 'detail'):
-                error_data = {"errors": e.detail}
-            return success_response(code=400, message="标签名称不符合要求", data=error_data) 
+            return success_response(code=400, message=str(e)) 
