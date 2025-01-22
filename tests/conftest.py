@@ -6,8 +6,28 @@ from tests.apps.post.factories import UserFactory, PostFactory, CommentFactory
 User = get_user_model()
 
 @pytest.fixture
+def normal_user(db):
+    """创建普通用户"""
+    return User.objects.create_user(
+        username='normal_user',
+        email='normal@example.com',
+        password='testpass123',
+        nickname='普通用户'
+    )
+
+@pytest.fixture
+def admin_user(db):
+    """创建管理员用户"""
+    return User.objects.create_superuser(
+        username='admin_user',
+        email='admin@example.com',
+        password='testpass123',
+        nickname='管理员'
+    )
+
+@pytest.fixture
 def api_client():
-    """返回API测试客户端"""
+    """创建 API 测试客户端"""
     return APIClient()
 
 @pytest.fixture
@@ -43,11 +63,10 @@ def user():
     return UserFactory()
 
 @pytest.fixture
-def auth_client(user):
-    """返回已认证的API测试客户端"""
-    client = APIClient()
-    client.force_authenticate(user=user)
-    return client
+def auth_client(api_client, normal_user):
+    """创建已认证的 API 测试客户端"""
+    api_client.force_authenticate(user=normal_user)
+    return api_client
 
 @pytest.fixture
 def user_factory():
@@ -62,4 +81,19 @@ def post_factory():
 @pytest.fixture
 def comment_factory():
     """返回评论工厂类"""
-    return CommentFactory 
+    return CommentFactory
+
+@pytest.fixture
+def post(user):
+    """创建测试文章"""
+    return PostFactory(author=user, status='published')
+
+@pytest.fixture
+def other_user():
+    """创建另一个测试用户"""
+    return UserFactory()
+
+@pytest.fixture
+def other_post(other_user):
+    """创建另一个测试文章"""
+    return PostFactory(author=other_user, status='published') 

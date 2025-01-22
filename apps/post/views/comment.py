@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from apps.core.response import success_response, created_response, error_response
+from apps.core.response import success_response, error_response
 from apps.core.permissions import IsAdminUserOrReadOnly
 from ..models import Comment, Post
 from ..serializers.comment import CommentSerializer
@@ -27,7 +27,9 @@ class GlobalCommentListView(generics.ListAPIView):
 
     def get_queryset(self):
         """获取评论查询集"""
-        return Comment.objects.annotate(
+        return Comment.objects.filter(
+            parent__isnull=True  # 只返回主评论
+        ).annotate(
             reply_count=Count('replies')
         ).select_related(
             'author', 'post'
@@ -98,7 +100,6 @@ class GlobalCommentListView(generics.ListAPIView):
 class CommentListCreateView(generics.ListCreateAPIView):
     """评论列表和创建视图"""
     serializer_class = CommentSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
         """获取评论列表，只返回顶级评论"""
@@ -121,8 +122,7 @@ class CommentListCreateView(generics.ListCreateAPIView):
             )
         ],
         responses={
-            200: CommentSerializer(many=True),
-            404: '文章不存在'
+            200: CommentSerializer(many=True)
         }
     )
     def get(self, request, *args, **kwargs):
@@ -132,7 +132,7 @@ class CommentListCreateView(generics.ListCreateAPIView):
             return error_response(
                 code=404,
                 message="文章不存在",
-                status_code=status.HTTP_404_NOT_FOUND
+                status_code=status.HTTP_200_OK
             )
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
@@ -158,30 +158,72 @@ class CommentListCreateView(generics.ListCreateAPIView):
             }
         ),
         responses={
-            201: CommentSerializer,
-            400: '参数错误',
-            404: '文章不存在'
+            200: CommentSerializer
         }
     )
     def post(self, request, *args, **kwargs):
         """创建评论"""
+        if not request.user.is_authenticated:
+            return error_response(
+                code=401,
+                message="未登录用户无法评论",
+                status_code=status.HTTP_200_OK
+            )
+
         post_id = self.kwargs.get('post_id')
-        post = get_object_or_404(Post, id=post_id)
+        try:
+            post = Post.objects.get(id=post_id)
+        except Post.DoesNotExist:
+            return error_response(
+                code=404,
+                message="文章不存在",
+                status_code=status.HTTP_200_OK
+            )
+        
+        content = request.data.get('content')
+        if not content:
+            return error_response(
+                code=400,
+                message="评论内容不能为空",
+                status_code=status.HTTP_200_OK
+            )
+
+        parent_id = request.data.get('parent')
+        if parent_id:
+            try:
+                parent = Comment.objects.get(id=parent_id)
+                if parent.parent:
+                    return error_response(
+                        code=400,
+                        message="不支持嵌套回复",
+                        status_code=status.HTTP_200_OK
+                    )
+                if parent.post_id != post.id:
+                    return error_response(
+                        code=400,
+                        message="不能跨文章回复评论",
+                        status_code=status.HTTP_200_OK
+                    )
+            except Comment.DoesNotExist:
+                return error_response(
+                    code=400,
+                    message="父评论不存在",
+                    status_code=status.HTTP_200_OK
+                )
         
         serializer = self.get_serializer(data={
             'post': post.id,
-            'content': request.data.get('content'),
-            'parent': request.data.get('parent')
+            'content': content,
+            'parent': parent_id
         })
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        return created_response(data=serializer.data)
+        return success_response(data=serializer.data)
 
 class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
     """评论详情、更新和删除视图"""
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
         """获取评论查询集"""
@@ -193,8 +235,7 @@ class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
         operation_summary='获取评论详情',
         operation_description='获取指定评论的详细信息',
         responses={
-            200: CommentSerializer,
-            404: '评论不存在'
+            200: CommentSerializer
         }
     )
     def get(self, request, *args, **kwargs):
@@ -214,20 +255,24 @@ class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
             }
         ),
         responses={
-            200: CommentSerializer,
-            400: '参数错误',
-            403: '无权限修改',
-            404: '评论不存在'
+            200: CommentSerializer
         }
     )
     def put(self, request, *args, **kwargs):
         """更新评论"""
+        if not request.user.is_authenticated:
+            return error_response(
+                code=401,
+                message="未登录用户无法修改评论",
+                status_code=status.HTTP_200_OK
+            )
+
         instance = self.get_object()
         if instance.author != request.user:
             return error_response(
                 code=403,
-                message="无权限修改此评论",
-                status_code=status.HTTP_403_FORBIDDEN
+                message="无权修改他人的评论",
+                status_code=status.HTTP_200_OK
             )
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -238,19 +283,24 @@ class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
         operation_summary='删除评论',
         operation_description='删除指定评论',
         responses={
-            204: '删除成功',
-            403: '无权限删除',
-            404: '评论不存在'
+            200: '删除成功'
         }
     )
     def delete(self, request, *args, **kwargs):
         """删除评论"""
+        if not request.user.is_authenticated:
+            return error_response(
+                code=401,
+                message="未登录用户无法删除评论",
+                status_code=status.HTTP_200_OK
+            )
+
         instance = self.get_object()
         if instance.author != request.user:
             return error_response(
                 code=403,
-                message="无权限删除此评论",
-                status_code=status.HTTP_403_FORBIDDEN
+                message="无权删除他人的评论",
+                status_code=status.HTTP_200_OK
             )
         self.perform_destroy(instance)
-        return Response(status=status.HTTP_204_NO_CONTENT) 
+        return success_response(message="删除成功") 

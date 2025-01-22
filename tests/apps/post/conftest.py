@@ -1,7 +1,8 @@
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
-from apps.post.models import Post, Comment
+from apps.post.models import Post, Comment, Tag
+from apps.user.models import User
 
 User = get_user_model()
 
@@ -72,4 +73,21 @@ def reply(post, other_user, comment):
         author=other_user,
         content='测试回复',
         parent=comment
+    )
+
+@pytest.fixture
+def other_user_comment(other_user, post):
+    """创建其他用户的评论"""
+    return Comment.objects.create(
+        content='Test comment by other user',
+        author=other_user,
+        post=post
+    )
+
+@pytest.fixture
+def tag(db):
+    """创建测试标签"""
+    return Tag.objects.create(
+        name='Test Tag',
+        description='Test Description'
     ) 

@@ -10,17 +10,14 @@ class PluginSerializer(TimezoneSerializerMixin, serializers.ModelSerializer):
                  'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
 
-class PluginInstallSerializer(TimezoneSerializerMixin, serializers.Serializer):
+class PluginInstallSerializer(TimezoneSerializerMixin, serializers.ModelSerializer):
     """插件安装序列化器"""
-    file = serializers.FileField(write_only=True)
-
-    def validate_file(self, value):
-        # TODO: 验证插件文件格式和内容
-        return value
+    class Meta:
+        model = models.Plugin
+        fields = ['name', 'description', 'version']
 
     def create(self, validated_data):
-        # TODO: 实现插件安装逻辑
-        pass
+        return models.Plugin.objects.create(**validated_data)
 
 class PluginConfigSerializer(TimezoneSerializerMixin, serializers.ModelSerializer):
     """插件配置序列化器"""

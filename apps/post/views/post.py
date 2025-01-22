@@ -5,6 +5,7 @@ from django.utils import timezone
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from django.db.models import Q
+from apps.core.response import success_response, error_response
 from ..models import Post
 from ..serializers import (
     PostListSerializer,
@@ -19,7 +20,11 @@ class PostListView(generics.ListCreateAPIView):
     search_fields = ['title', 'content', 'excerpt']
     ordering_fields = ['created_at', 'updated_at', 'published_at', 'views', 'likes']
     ordering = ['-created_at']
-    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return []
+        return [IsAuthenticated()]
 
     @swagger_auto_schema(
         operation_summary='获取文章列表',
@@ -112,7 +117,20 @@ class PostListView(generics.ListCreateAPIView):
         }
     )
     def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            return success_response(data=serializer.data)
+        except Exception as e:
+            error_data = None
+            if hasattr(e, 'detail'):
+                error_data = {"errors": e.detail}
+            return error_response(
+                code=400,
+                message="创建文章失败",
+                data=error_data
+            )
 
     def get_queryset(self):
         # 如果是swagger文档生成，返回空查询集
@@ -120,9 +138,30 @@ class PostListView(generics.ListCreateAPIView):
             return Post.objects.none()
             
         # 正常的查询逻辑
-        if self.request.user.is_staff:
-            return Post.objects.all()
-        return Post.objects.filter(status='published')
+        queryset = Post.objects.filter(is_deleted=False)
+        
+        # 如果不是管理员或未登录用户,只能看到已发布的文章
+        if not self.request.user.is_authenticated or not self.request.user.is_staff:
+            queryset = queryset.filter(status='published')
+            
+        # 应用过滤器
+        category = self.request.query_params.get('category')
+        if category:
+            queryset = queryset.filter(category_id=category)
+            
+        tags = self.request.query_params.getlist('tags')
+        if tags:
+            queryset = queryset.filter(tags__id__in=tags).distinct()
+            
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search) |
+                Q(content__icontains=search) |
+                Q(excerpt__icontains=search)
+            ).distinct()
+            
+        return queryset
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -152,6 +191,21 @@ class PostDetailView(generics.RetrieveAPIView):
             return Post.objects.all()
         return Post.objects.filter(status='published')
 
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            return success_response(data=serializer.data)
+        except Exception as e:
+            error_data = None
+            if hasattr(e, 'detail'):
+                error_data = {"errors": e.detail}
+            return error_response(
+                code=404,
+                message="文章不存在或无权限访问",
+                data=error_data
+            )
+
 class PostUpdateView(generics.UpdateAPIView):
     """文章更新视图"""
     queryset = Post.objects.all()
@@ -164,6 +218,27 @@ class PostUpdateView(generics.UpdateAPIView):
             return Post.objects.none()
         return Post.objects.filter(author=self.request.user)
 
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            return success_response(data=serializer.data)
+        except Exception as e:
+            error_data = None
+            if hasattr(e, 'detail'):
+                error_data = {"errors": e.detail}
+            return error_response(
+                code=400,
+                message="更新文章失败",
+                data=error_data
+            )
+
+    def perform_update(self, serializer):
+        serializer.save()
+
 class PostDeleteView(generics.DestroyAPIView):
     """文章删除视图"""
     queryset = Post.objects.all()
@@ -175,34 +250,54 @@ class PostDeleteView(generics.DestroyAPIView):
             return Post.objects.none()
         return Post.objects.filter(author=self.request.user)
 
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            self.perform_destroy(instance)
+            return success_response(message="文章已移至回收站")
+        except Exception as e:
+            error_data = None
+            if hasattr(e, 'detail'):
+                error_data = {"errors": e.detail}
+            return error_response(
+                code=404,
+                message="文章不存在或无权限删除",
+                data=error_data
+            )
+
+    def perform_destroy(self, instance):
+        instance.is_deleted = True
+        instance.deleted_at = timezone.now()
+        instance.save()
+
 class PostLikeView(views.APIView):
     """文章点赞视图"""
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
         try:
-            post = Post.objects.get(pk=pk, status='published')
+            post = Post.objects.get(pk=pk, status='published', is_deleted=False)
             post.likes += 1
             post.save()
-            return Response({'likes': post.likes})
+            return success_response(data={'likes': post.likes})
         except Post.DoesNotExist:
-            return Response(
-                {'error': '文章不存在或未发布'},
-                status=status.HTTP_404_NOT_FOUND
+            return error_response(
+                code=404,
+                message='文章不存在或未发布'
             )
 
 class PostViewView(views.APIView):
     """文章浏览视图"""
     def post(self, request, pk):
         try:
-            post = Post.objects.get(pk=pk, status='published')
+            post = Post.objects.get(pk=pk, status='published', is_deleted=False)
             post.views += 1
             post.save()
-            return Response({'views': post.views})
+            return success_response(data={'views': post.views})
         except Post.DoesNotExist:
-            return Response(
-                {'error': '文章不存在或未发布'},
-                status=status.HTTP_404_NOT_FOUND
+            return error_response(
+                code=404,
+                message='文章不存在或未发布'
             )
 
 class PostArchiveView(views.APIView):
@@ -214,11 +309,11 @@ class PostArchiveView(views.APIView):
             post = Post.objects.get(pk=pk, author=request.user)
             post.status = 'archived'
             post.save()
-            return Response({'status': 'archived'})
+            return success_response(data={'status': 'archived'})
         except Post.DoesNotExist:
-            return Response(
-                {'error': '文章不存在或无权限'},
-                status=status.HTTP_404_NOT_FOUND
+            return error_response(
+                code=404,
+                message='文章不存在或无权限'
             )
 
 class PostTrashListView(generics.ListAPIView):
@@ -234,99 +329,52 @@ class PostTrashListView(generics.ListAPIView):
             return Post.objects.filter(is_deleted=True)
         return Post.objects.filter(is_deleted=True, author=self.request.user)
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return success_response(data=serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return success_response(data=serializer.data)
+
 class PostRestoreView(views.APIView):
     """恢复已删除文章视图"""
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        operation_summary='恢复已删除文章',
-        operation_description='将文章从回收站恢复，状态会重置为草稿。',
-        responses={
-            200: openapi.Response(
-                description='恢复成功',
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        'code': openapi.Schema(type=openapi.TYPE_INTEGER),
-                        'message': openapi.Schema(type=openapi.TYPE_STRING),
-                        'data': openapi.Schema(
-                            type=openapi.TYPE_OBJECT,
-                            properties={
-                                'id': openapi.Schema(type=openapi.TYPE_INTEGER),
-                                'title': openapi.Schema(type=openapi.TYPE_STRING),
-                                'status': openapi.Schema(type=openapi.TYPE_STRING)
-                            }
-                        )
-                    }
-                )
-            ),
-            404: '文章不存在或无权限'
-        }
-    )
     def post(self, request, pk):
         try:
-            post = Post.objects.get(
-                Q(author=request.user) | Q(author__is_staff=True),
-                pk=pk,
-                is_deleted=True
-            )
-            post.restore()
-            return Response({
-                'code': 200,
-                'message': 'success',
-                'data': {
-                    'id': post.id,
-                    'title': post.title,
-                    'status': post.status
-                }
-            })
+            post = Post.objects.get(pk=pk, is_deleted=True, author=request.user)
+            post.is_deleted = False
+            post.status = 'draft'
+            post.save()
+            return success_response(data={'status': 'restored'})
         except Post.DoesNotExist:
-            return Response(
-                {'error': '文章不存在或无权限'},
-                status=status.HTTP_404_NOT_FOUND
+            return error_response(
+                code=404,
+                message='文章不存在或无权限'
             )
 
 class PostPermanentDeleteView(views.APIView):
-    """彻底删除文章视图"""
+    """永久删除文章视图"""
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        operation_summary='彻底删除文章',
-        operation_description='从回收站中永久删除文章，此操作不可恢复。',
-        responses={
-            204: '删除成功',
-            404: '文章不存在或无权限'
-        }
-    )
     def delete(self, request, pk):
         try:
-            post = Post.objects.get(
-                Q(author=request.user) | Q(author__is_staff=True),
-                pk=pk,
-                is_deleted=True
-            )
+            post = Post.objects.get(pk=pk, is_deleted=True, author=request.user)
             post.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return success_response(message="文章已永久删除")
         except Post.DoesNotExist:
-            return Response(
-                {'error': '文章不存在或无权限'},
-                status=status.HTTP_404_NOT_FOUND
+            return error_response(
+                code=404,
+                message='文章不存在或无权限'
             )
 
 class PostEmptyTrashView(views.APIView):
     """清空回收站视图"""
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        operation_summary='清空回收站',
-        operation_description='清空回收站中的所有文章，此操作不可恢复。管理员可以清空所有文章，普通用户只能清空自己的文章。',
-        responses={
-            204: '清空成功',
-        }
-    )
     def delete(self, request):
-        if request.user.is_staff:
-            Post.objects.filter(is_deleted=True).delete()
-        else:
-            Post.objects.filter(is_deleted=True, author=request.user).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT) 
+        # 只删除当前用户的文章
+        Post.objects.filter(is_deleted=True, author=request.user).delete()
+        return success_response(message="回收站已清空") 

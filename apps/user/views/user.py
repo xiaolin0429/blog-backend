@@ -27,7 +27,7 @@ class UserRegisterView(generics.CreateAPIView):
                 "email": user.email,
                 "nickname": user.nickname
             }
-            return created_response(data=data)
+            return success_response(data=data)
         except Exception as e:
             error_data = None
             if hasattr(e, 'detail'):
@@ -35,8 +35,7 @@ class UserRegisterView(generics.CreateAPIView):
             return error_response(
                 code=400,
                 message="注册失败",
-                data=error_data,
-                status_code=status.HTTP_400_BAD_REQUEST
+                data=error_data
             )
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
@@ -84,8 +83,7 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
             return error_response(
                 code=400,
                 message="更新失败",
-                data=error_data,
-                status_code=status.HTTP_400_BAD_REQUEST
+                data=error_data
             )
 
 class PasswordChangeView(generics.GenericAPIView):
@@ -109,6 +107,5 @@ class PasswordChangeView(generics.GenericAPIView):
             return error_response(
                 code=400,
                 message="密码修改失败",
-                data=error_data,
-                status_code=status.HTTP_400_BAD_REQUEST
+                data=error_data
             ) 

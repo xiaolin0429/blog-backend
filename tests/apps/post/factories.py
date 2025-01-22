@@ -25,6 +25,7 @@ class PostFactory(factory.django.DjangoModelFactory):
     content = factory.LazyFunction(lambda: fake.text())
     author = factory.SubFactory(UserFactory)
     status = 'published'
+    published_at = factory.LazyFunction(timezone.now)
 
 class CommentFactory(factory.django.DjangoModelFactory):
     """评论工厂类"""
