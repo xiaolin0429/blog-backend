@@ -72,6 +72,18 @@ class TestPluginViews:
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert "您没有执行该操作的权限" in str(response.data['detail'])
 
+    def test_install_plugin_invalid(self, admin_client):
+        """测试安装无效插件"""
+        url = reverse('plugin:install')
+        # 缺少必填字段 version
+        data = {'name': 'test-plugin'}
+        response = admin_client.post(url, data)
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['code'] == 400
+        assert response.data['message'] == "安装插件失败"
+        assert 'version' in str(response.data['data']['errors'])
+
     def test_uninstall_plugin(self, admin_client, test_plugin):
         """测试卸载插件"""
         url = reverse('plugin:uninstall', kwargs={'plugin_id': test_plugin.name})
@@ -163,4 +175,42 @@ class TestPluginViews:
         
         assert response.status_code == status.HTTP_200_OK
         assert response.data['code'] == 400
-        assert response.data['message'] == "更新配置失败" 
+        assert response.data['message'] == "更新配置失败"
+
+    def test_get_plugin_settings(self, admin_client, test_plugin):
+        """测试获取插件配置"""
+        url = reverse('plugin:settings', kwargs={'plugin_id': test_plugin.name})
+        response = admin_client.get(url)
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['code'] == 200
+        assert response.data['data']['config'] == test_plugin.config
+
+    def test_get_plugin_settings_forbidden(self, auth_client, test_plugin):
+        """测试普通用户无法获取插件配置"""
+        url = reverse('plugin:settings', kwargs={'plugin_id': test_plugin.name})
+        response = auth_client.get(url)
+        
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert "您没有执行该操作的权限" in str(response.data['detail'])
+
+    def test_update_plugin_settings_forbidden(self, auth_client, test_plugin):
+        """测试普通用户无法更新插件配置"""
+        url = reverse('plugin:settings', kwargs={'plugin_id': test_plugin.name})
+        data = {'config': {'key': 'new_value'}}
+        response = auth_client.put(url, data, format='json')
+        
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert "您没有执行该操作的权限" in str(response.data['detail'])
+
+    def test_update_plugin_settings_invalid(self, admin_client, test_plugin):
+        """测试更新无效的插件配置"""
+        url = reverse('plugin:settings', kwargs={'plugin_id': test_plugin.name})
+        # config 必须是字典类型
+        data = {'config': 'invalid'}
+        response = admin_client.put(url, data, format='json')
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['code'] == 400
+        assert response.data['message'] == "更新配置失败"
+        assert 'config' in str(response.data['data']['errors']) 
