@@ -2,6 +2,8 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.utils import timezone
+import datetime
 
 User = get_user_model()
 
@@ -73,13 +75,20 @@ class TestUserModel:
 
     def test_ordering(self, user_data):
         """测试用户排序"""
+        # 创建第一个用户
         user1 = User.objects.create_user(**user_data)
+        user1.date_joined = timezone.now() - datetime.timedelta(hours=1)
+        user1.save()
+        
+        # 创建第二个用户
         user2_data = user_data.copy()
         user2_data.update({
             "username": "testuser2",
             "email": "test2@example.com"
         })
         user2 = User.objects.create_user(**user2_data)
+        user2.date_joined = timezone.now()
+        user2.save()
         
         users = User.objects.all()
         assert users[0] == user2  # 后创建的用户应该在前面

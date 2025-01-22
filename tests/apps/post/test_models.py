@@ -84,21 +84,26 @@ class TestPostModel:
 
     def test_post_ordering(self, normal_user):
         """测试文章的排序功能"""
-        # 创建三篇文章
+        base_time = timezone.now()
+        
+        # 创建三篇文章，每篇文章的创建时间间隔1小时
         post1 = Post.objects.create(
             title='文章1',
             content='内容1',
             author=normal_user,
+            created_at=base_time - timezone.timedelta(hours=2)
         )
         post2 = Post.objects.create(
             title='文章2',
             content='内容2',
             author=normal_user,
+            created_at=base_time - timezone.timedelta(hours=1)
         )
         post3 = Post.objects.create(
             title='文章3',
             content='内容3',
             author=normal_user,
+            created_at=base_time
         )
 
         # 获取所有文章，应该按创建时间倒序排列

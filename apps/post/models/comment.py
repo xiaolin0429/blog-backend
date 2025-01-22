@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 
 class Comment(models.Model):
     """文章评论"""
@@ -8,7 +9,7 @@ class Comment(models.Model):
     author = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name=_('作者'), on_delete=models.CASCADE)
     content = models.TextField(_('内容'))
     parent = models.ForeignKey('self', verbose_name=_('父评论'), on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
-    created_at = models.DateTimeField(_('创建时间'), auto_now_add=True)
+    created_at = models.DateTimeField(_('创建时间'), default=timezone.now)
     updated_at = models.DateTimeField(_('更新时间'), auto_now=True)
 
     class Meta:

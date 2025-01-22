@@ -49,12 +49,13 @@ class TestGlobalCommentAPI:
 
     def test_list_comments_ordering(self, auth_client, post, user):
         # Create comments with different creation times
+        base_time = timezone.now()
         for i in range(5):
             comment = Comment.objects.create(
                 content=f'Comment {i}',
                 post=post,
                 author=user,
-                created_at=timezone.now() - timedelta(days=i)
+                created_at=base_time - timedelta(days=i, hours=i)  # 添加小时确保时间戳不同
             )
 
         # Test ordering by created_at descending
@@ -130,32 +131,40 @@ class TestGlobalCommentAPI:
         assert results[0]['author']['id'] == user.id
 
     def test_filter_by_date_range(self, auth_client, post, user):
-        # Create comments with different dates
+        """测试按日期范围过滤评论"""
+        base_time = timezone.now()
+        
+        # 创建评论，每个评论间隔1天
         dates = [
-            timezone.now() - timedelta(days=5),
-            timezone.now() - timedelta(days=3),
-            timezone.now() - timedelta(days=1)
+            base_time - timedelta(days=5),
+            base_time - timedelta(days=3),
+            base_time - timedelta(days=1)
         ]
+        
         for i, date in enumerate(dates):
-            comment = Comment.objects.create(
+            Comment.objects.create(
                 content=f'Comment on {date.strftime("%Y-%m-%d")}',
                 post=post,
                 author=user,
                 created_at=date
             )
 
-        # Test filtering by date range (last 3 days)
+        # 测试过滤最近3天的评论
+        start_date = (base_time - timedelta(days=3)).date()
+        end_date = base_time.date()
+        
         response = auth_client.get(
             reverse('post:global_comment_list'),
             {
-                'start_date': (timezone.now() - timedelta(days=3)).strftime('%Y-%m-%d'),
-                'end_date': timezone.now().strftime('%Y-%m-%d')
+                'start_date': start_date.strftime('%Y-%m-%d'),
+                'end_date': end_date.strftime('%Y-%m-%d')
             }
         )
+        
         assert response.status_code == status.HTTP_200_OK
         assert response.data['code'] == 200
         results = response.data['data']['results']
-        assert len(results) == 3  # Should include all comments within the date range
+        assert len(results) == 2  # 应该包含最近3天内的2条评论
 
     def test_search_by_keyword(self, auth_client, post, user):
         # Create comments with different content
@@ -188,10 +197,11 @@ class TestGlobalCommentAPI:
 
     def test_order_comments_by_created_at(self, auth_client, post, user):
         # Create comments with different creation times
+        base_time = timezone.now()
         dates = [
-            timezone.now() - timedelta(days=2),
-            timezone.now() - timedelta(days=1),
-            timezone.now()
+            base_time - timedelta(days=2, hours=2),
+            base_time - timedelta(days=1, hours=1),
+            base_time
         ]
         for i, date in enumerate(dates):
             Comment.objects.create(
