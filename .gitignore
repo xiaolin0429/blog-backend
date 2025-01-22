@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
-venv/Lib/site-packages/pip/_internal/operations/build/
+build/
 develop-eggs/
 dist/
 downloads/
@@ -16,13 +16,21 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Virtual Environment
+.env/
+.venv/
+env/
 venv/
 ENV/
+env.bak/
+venv.bak/
+pythonenv*/
 
 # IDE
 .idea/
@@ -30,6 +38,8 @@ ENV/
 *.swp
 *.swo
 .cursorrules
+*.sublime-workspace
+*.sublime-project
 
 # Django
 *.log
@@ -38,36 +48,45 @@ db.sqlite3
 db.sqlite3-journal
 media/
 static/
+staticfiles/
 
 # Environment variables
 .env
 .env.local
+.env.development
+.env.test
+.env.production
 
-# Test
+# Test and Coverage
 .coverage
+.coverage.*
+coverage.xml
+*.cover
 htmlcov/
 .pytest_cache/
+.tox/
+nosetests.xml
+coverage/
+.hypothesis/
+test-results/
+reports/
+allure-results/
+allure-reports/
 
 # Celery
 celerybeat-schedule
 celerybeat.pid
+celerybeat-schedule.*
 
-# Others
+# Documentation
+docs/_build/
+site/
+
+# Misc
 .DS_Store
 Thumbs.db
-
-# Test reports
-allure-results/
-allure-reports/
-htmlcov/
-.coverage
-coverage.xml
-.pytest_cache/
-test-results/
-reports/
-*.html.json
-
-# Coverage reports
-coverage/
-.coverage.*
-*,cover 
+*.bak
+*.tmp
+*.swp
+.env.local
+node_modules/ 
