@@ -72,7 +72,13 @@ class PostListView(generics.ListCreateAPIView):
         }
     )
     def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return success_response(data=self.paginator.get_paginated_response(serializer.data).data)
+        serializer = self.get_serializer(queryset, many=True)
+        return success_response(data={'results': serializer.data, 'count': queryset.count()})
 
     @swagger_auto_schema(
         operation_summary='创建新文章',
