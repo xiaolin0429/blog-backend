@@ -178,8 +178,9 @@ class TestCategoryViews:
             reverse('post:category_detail', args=[category.id])
         )
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['code'] == 200
-        assert response.data['message'] == "分类已删除"
+        assert response.data['code'] == 204
+        assert response.data['message'] == "success"
+        assert response.data['data'] is None
 
     def test_delete_nonexistent_category(self, auth_client):
         """测试删除不存在的分类"""
