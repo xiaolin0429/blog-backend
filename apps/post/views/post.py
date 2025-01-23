@@ -381,6 +381,17 @@ class PostEmptyTrashView(views.APIView):
     permission_classes = [IsAuthenticated]
 
     def delete(self, request):
-        # 只删除当前用户的文章
-        Post.objects.filter(is_deleted=True, author=request.user).delete()
-        return success_response(message="回收站已清空") 
+        try:
+            # 只删除当前用户的文章
+            deleted_count = Post.objects.filter(is_deleted=True, author=request.user).count()
+            Post.objects.filter(is_deleted=True, author=request.user).delete()
+            return success_response(
+                message="回收站已清空",
+                data={"deleted_count": deleted_count}
+            )
+        except Exception as e:
+            return error_response(
+                code=400,
+                message="清空回收站失败",
+                data={"error": str(e)}
+            ) 

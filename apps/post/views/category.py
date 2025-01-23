@@ -7,6 +7,7 @@ from apps.core.response import success_response, error_response
 from ..models import Category
 from ..serializers import CategorySerializer
 from django.http import Http404
+from django.core.exceptions import ValidationError
 
 class CategoryListView(generics.ListCreateAPIView):
     """分类列表视图"""
@@ -44,6 +45,13 @@ class CategoryListView(generics.ListCreateAPIView):
         except Exception as e:
             error_data = None
             if hasattr(e, 'detail'):
+                if 'name' in e.detail and any('已存在' in str(err) for err in e.detail['name']):
+                    name = request.data.get('name', '')
+                    return error_response(
+                        code=400,
+                        message="创建分类失败",
+                        data={"errors": {"name": [f"分类 '{name}' 已存在"]}}
+                    )
                 error_data = {"errors": e.detail}
             return error_response(
                 code=400,
@@ -95,11 +103,22 @@ class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
         try:
             instance = self.get_object()
             self.perform_destroy(instance)
-            return success_response(message="分类已删除")
+            return error_response(
+                code=204,
+                message="success",
+                data=None,
+                status_code=status.HTTP_200_OK
+            )
         except (Category.DoesNotExist, Http404):
             return error_response(
                 code=404,
                 message="分类不存在",
+                status_code=status.HTTP_200_OK
+            )
+        except ValidationError as e:
+            return error_response(
+                code=422,
+                message=str(e),
                 status_code=status.HTTP_200_OK
             )
 
