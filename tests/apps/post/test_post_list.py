@@ -12,8 +12,8 @@ class TestPostListView:
         response = api_client.get(url)
         
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['count'] == 0
-        assert len(response.data['results']) == 0
+        assert response.data['data']['count'] == 0
+        assert len(response.data['data']['results']) == 0
 
     def test_get_post_list_as_normal_user(self, normal_user, api_client):
         """测试普通用户只能看到已发布的文章"""
@@ -38,9 +38,9 @@ class TestPostListView:
         response = api_client.get(url)
         
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['count'] == 1  # 总数为1
-        assert len(response.data['results']) == 1  # 结果列表长度为1
-        assert response.data['results'][0]['title'] == '已发布文章'
+        assert response.data['data']['count'] == 1  # 总数为1
+        assert len(response.data['data']['results']) == 1  # 结果列表长度为1
+        assert response.data['data']['results'][0]['title'] == '已发布文章'
 
     def test_get_post_list_as_admin(self, admin_user, api_client):
         """测试管理员可以看到所有文章"""
@@ -69,8 +69,8 @@ class TestPostListView:
         response = api_client.get(url)
         
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['count'] == 3  # 总数为3
-        assert len(response.data['results']) == 3  # 结果列表长度为3
+        assert response.data['data']['count'] == 3  # 总数为3
+        assert len(response.data['data']['results']) == 3  # 结果列表长度为3
 
     def test_filter_posts_by_category(self, normal_user, api_client):
         """测试按分类筛选文章"""
@@ -99,9 +99,9 @@ class TestPostListView:
         response = api_client.get(f'{url}?category={category1.id}')
         
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['count'] == 1  # 总数为1
-        assert len(response.data['results']) == 1  # 结果列表长度为1
-        assert response.data['results'][0]['category'] == category1.id
+        assert response.data['data']['count'] == 1  # 总数为1
+        assert len(response.data['data']['results']) == 1  # 结果列表长度为1
+        assert response.data['data']['results'][0]['category'] == category1.id
 
     def test_filter_posts_by_tags(self, normal_user, api_client):
         """测试按标签筛选文章"""
@@ -131,9 +131,9 @@ class TestPostListView:
         response = api_client.get(f'{url}?tags={tag1.id}')
         
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['count'] == 1  # 总数为1
-        assert len(response.data['results']) == 1  # 结果列表长度为1
-        assert response.data['results'][0]['title'] == '文章1'
+        assert response.data['data']['count'] == 1  # 总数为1
+        assert len(response.data['data']['results']) == 1  # 结果列表长度为1
+        assert response.data['data']['results'][0]['title'] == '文章1'
 
     def test_search_posts(self, normal_user, api_client):
         """测试搜索文章"""
@@ -156,9 +156,9 @@ class TestPostListView:
         response = api_client.get(f'{url}?search=Python')
         
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['count'] == 1  # 总数为1
-        assert len(response.data['results']) == 1  # 结果列表长度为1
-        assert 'Python' in response.data['results'][0]['title']
+        assert response.data['data']['count'] == 1  # 总数为1
+        assert len(response.data['data']['results']) == 1  # 结果列表长度为1
+        assert 'Python' in response.data['data']['results'][0]['title']
 
     def test_order_posts(self, normal_user, api_client):
         """测试文章排序"""
@@ -190,15 +190,15 @@ class TestPostListView:
         # 按浏览量排序
         response = api_client.get(f'{url}?ordering=-views')
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['results'][0]['title'] == '文章2'
+        assert response.data['data']['results'][0]['title'] == '文章2'
         
         # 按点赞数排序
         response = api_client.get(f'{url}?ordering=-likes')
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['results'][0]['title'] == '文章2'
+        assert response.data['data']['results'][0]['title'] == '文章2'
         
         # 按创建时间排序
         response = api_client.get(f'{url}?ordering=-created_at')
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['results'][0]['title'] == '文章2'
-        assert response.data['results'][1]['title'] == '文章1' 
+        assert response.data['data']['results'][0]['title'] == '文章2'
+        assert response.data['data']['results'][1]['title'] == '文章1' 

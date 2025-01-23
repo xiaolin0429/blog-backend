@@ -25,7 +25,7 @@ class PostAPITests(APITestCase):
         """测试获取文章列表"""
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(len(response.data['data']['results']), 1)
 
     def test_retrieve_post(self):
         """测试获取单个文章详情"""
