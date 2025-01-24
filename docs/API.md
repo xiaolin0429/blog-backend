@@ -2162,3 +2162,93 @@ DELETE /api/tags/{id}/
     }
 }
 ```
+
+### 10. 搜索功能
+
+#### 10.1 高级搜索
+- **接口说明**: 支持多字段组合的模糊搜索，可按分类、标签、作者、日期范围过滤，支持结果高亮显示
+- **请求方式**: GET
+- **接口路径**: `/search`
+- **请求参数**:
+  - keyword: 搜索关键词（必填，支持模糊匹配，不区分大小写）
+  - fields: 搜索字段（可选，多个字段用逗号分隔，可选值：title,content,excerpt）
+  - category: 分类ID（可选）
+  - tags: 标签ID列表（可选，多个标签用逗号分隔）
+  - author: 作者ID（可选）
+  - date_start: 开始日期（可选，YYYY-MM-DD格式）
+  - date_end: 结束日期（可选，YYYY-MM-DD格式）
+  - highlight: 是否高亮显示搜索结果（可选，默认true）
+  - page: 页码（可选，默认1）
+  - page_size: 每页数量（可选，默认10）
+
+- **响应数据**
+```json
+{
+    "code": 200,          // 状态码（必返回）
+    "message": "success", // 状态信息（必返回）
+    "data": {            // 响应数据（必返回）
+        "count": number,      // 总数（必返回）
+        "next": "string",     // 下一页URL（可能为null）
+        "previous": "string", // 上一页URL（可能为null）
+        "results": [         // 搜索结果列表（必返回）
+            {
+                "id": number,           // 文章ID（必返回）
+                "title": "string",      // 文章标题（必返回，可能包含高亮标签）
+                "excerpt": "string",    // 文章摘要（必返回，可能包含高亮标签）
+                "content": "string",    // 文章内容（必返回，可能包含高亮标签）
+                "author": {            // 作者信息（必返回）
+                    "id": number,       // 作者ID（必返回）
+                    "username": "string" // 用户名（必返回）
+                },
+                "category": {          // 分类信息（必返回）
+                    "id": number,       // 分类ID（必返回）
+                    "name": "string"    // 分类名称（必返回）
+                },
+                "tags": [             // 标签列表（必返回）
+                    {
+                        "id": number,   // 标签ID（必返回）
+                        "name": "string" // 标签名称（必返回）
+                    }
+                ],
+                "created_at": "string", // 创建时间（必返回）
+                "updated_at": "string"  // 更新时间（必返回）
+            }
+        ]
+    },
+    "timestamp": "string", // 时间戳（必返回）
+    "requestId": "string"  // 请求ID（必返回）
+}
+```
+- **错误码**:
+  - 400: 搜索关键词不能为空
+  - 400: 无效的日期格式
+
+#### 10.2 搜索建议
+- **接口说明**: 根据输入的关键词返回相关的文章、分类、标签建议
+- **请求方式**: GET
+- **接口路径**: `/search/suggest`
+- **请求参数**:
+  - keyword: 搜索关键词（必填，支持模糊匹配，不区分大小写）
+  - limit: 返回结果数量限制（可选，默认10）
+
+- **响应数据**
+```json
+{
+    "code": 200,          // 状态码（必返回）
+    "message": "success", // 状态信息（必返回）
+    "data": {            // 响应数据（必返回）
+        "suggestions": [   // 建议列表（必返回）
+            {
+                "type": "string",    // 建议类型（必返回）：post|category|tag
+                "id": number,        // ID（必返回）
+                "title": "string",   // 标题（必返回）
+                "excerpt": "string"  // 摘要（必返回）
+            }
+        ]
+    },
+    "timestamp": "string", // 时间戳（必返回）
+    "requestId": "string"  // 请求ID（必返回）
+}
+```
+- **错误码**:
+  - 400: 搜索关键词不能为空

@@ -8,9 +8,10 @@ app_name = 'post'
 
 urlpatterns = [
     path('posts/', include('apps.post.urls.post')),
-    path('', include('apps.post.urls.comment')),
     path('categories/', include('apps.post.urls.category')),
     path('tags/', include('apps.post.urls.tag')),
+    path('comments/', include('apps.post.urls.comment')),
+    path('search/', include('apps.post.urls.search')),
     
     # 回收站相关路由
     path('trash/posts/empty/', PostEmptyTrashView.as_view(), name='post_empty_trash'),
