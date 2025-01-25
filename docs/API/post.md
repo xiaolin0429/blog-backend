@@ -156,7 +156,7 @@
 - **接口路径**: `/api/v1/posts/{id}/`
 - **请求头**:
   - Authorization: Bearer {token}
-- **响应数据**: 
+- **响应数据**:
 ```json
 {
     "code": 204,
@@ -216,4 +216,68 @@
 - **错误码**:
   - 401: 未授权
   - 403: 无权限操作此文章
-  - 404: 文章不存在 
+  - 404: 文章不存在
+
+## 自动保存文章
+- **接口说明**: 自动保存文章内容。每10秒最多保存一次，每2分钟强制保存一次。
+- **请求方式**: POST
+- **接口路径**: `/api/v1/posts/{id}/auto-save/`
+- **请求头**:
+  - Authorization: Bearer {token}（必填）
+  - Content-Type: application/json
+- **请求参数**:
+```json
+{
+    "title": "string",     // 文章标题
+    "content": "string",   // 文章内容
+    "excerpt": "string",   // 文章摘要（可选）
+    "category": 0,        // 分类ID（可选）
+    "tags": [0],         // 标签ID列表（可选）
+    "force_save": false  // 是否强制保存（可选，距离上次保存超过2分钟时可用）
+}
+```
+- **响应数据**:
+```json
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "version": 1,                              // 当前版本号
+        "next_save_time": "2024-01-25T12:00:10Z"  // 下次允许保存的时间
+    }
+}
+```
+- **错误码**:
+  - 400: 请求参数错误
+  - 401: 未授权（未登录或token无效）
+  - 403: 无权限（非文章作者）
+  - 404: 文章不存在
+  - 429: 请求过于频繁（需等待10秒）
+  - 500: 数据库错误
+
+## 获取自动保存内容
+- **接口说明**: 获取文章最近一次自动保存的内容。如果没有自动保存内容，则返回当前内容。
+- **请求方式**: GET
+- **接口路径**: `/api/v1/posts/{id}/auto-save/`
+- **请求头**:
+  - Authorization: Bearer {token}（必填）
+- **响应数据**:
+```json
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "title": "string",                        // 文章标题
+        "content": "string",                      // 文章内容
+        "excerpt": "string",                      // 文章摘要
+        "category": 0,                           // 分类ID
+        "tags": [0],                            // 标签ID列表
+        "version": 1,                           // 版本号
+        "auto_save_time": "2024-01-25T12:00:00Z" // 自动保存时间
+    }
+}
+```
+- **错误码**:
+  - 401: 未授权（未登录或token无效）
+  - 403: 无权限（非文章作者）
+  - 404: 文章不存在

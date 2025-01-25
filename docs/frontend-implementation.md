@@ -96,7 +96,7 @@ const showSidebar = computed(() => themeStore.layout.sidebar !== 'none')
       <el-form-item label="标题" prop="title">
         <el-input v-model="postForm.title" />
       </el-form-item>
-      
+
       <el-form-item label="内容" prop="content">
         <markdown-editor
           v-model="postForm.content"
@@ -104,15 +104,15 @@ const showSidebar = computed(() => themeStore.layout.sidebar !== 'none')
           @save="handleAutoSave"
         />
       </el-form-item>
-      
+
       <el-form-item label="分类" prop="categoryId">
         <category-selector v-model="postForm.categoryId" />
       </el-form-item>
-      
+
       <el-form-item label="标签" prop="tags">
         <tag-selector v-model="postForm.tags" multiple />
       </el-form-item>
-      
+
       <el-form-item>
         <el-button type="primary" @click="handleSubmit">发布</el-button>
         <el-button @click="handleSaveDraft">存为草稿</el-button>
@@ -151,7 +151,7 @@ const rules = {
   ]
 }
 
-const enabledPlugins = computed(() => 
+const enabledPlugins = computed(() =>
   pluginStore.plugins.filter(p => p.type === 'content' && p.enabled)
 )
 
@@ -247,7 +247,7 @@ const props = defineProps<{
 
 const pluginStore = usePluginStore()
 
-const activePlugins = computed(() => 
+const activePlugins = computed(() =>
   pluginStore.getActivePluginsByPosition(props.position)
 )
 
@@ -273,7 +273,7 @@ export const usePostStore = defineStore('post', {
     loading: false,
     total: 0
   }),
-  
+
   actions: {
     async fetchPosts(params: any) {
       this.loading = true
@@ -285,13 +285,13 @@ export const usePostStore = defineStore('post', {
         this.loading = false
       }
     },
-    
+
     async createPost(form: PostForm) {
       const { data } = await PostApi.createPost(form)
       this.posts.unshift(data)
       return data
     },
-    
+
     async updatePost(id: number, form: PostForm) {
       const { data } = await PostApi.updatePost(id, form)
       const index = this.posts.findIndex(p => p.id === id)
@@ -314,19 +314,19 @@ export const PostApi = {
   getPosts(params: any) {
     return http.get<Post[]>('/posts', { params })
   },
-  
+
   getPost(id: number) {
     return http.get<Post>(`/posts/${id}`)
   },
-  
+
   createPost(data: PostForm) {
     return http.post<Post>('/posts', data)
   },
-  
+
   updatePost(id: number, data: PostForm) {
     return http.put<Post>(`/posts/${id}`, data)
   },
-  
+
   deletePost(id: number) {
     return http.delete(`/posts/${id}`)
   }
@@ -364,7 +364,7 @@ export const useThemeStore = defineStore('theme', {
     isDarkMode: false,
     config: {} as ThemeConfig
   }),
-  
+
   actions: {
     async switchTheme(themeId: string) {
       const { data } = await ThemeApi.switchTheme(themeId)
@@ -372,15 +372,15 @@ export const useThemeStore = defineStore('theme', {
       this.config = data.config
       this.applyTheme()
     },
-    
+
     toggleDarkMode() {
       this.isDarkMode = !this.isDarkMode
       document.documentElement.classList.toggle('dark')
     },
-    
+
     applyTheme() {
       const { colors, typography } = this.config
-      
+
       // 应用主题变量
       document.documentElement.style.setProperty('--primary-color', colors.primary)
       document.documentElement.style.setProperty('--font-family', typography.fontFamily)
@@ -398,24 +398,24 @@ import type { Plugin } from '@/types'
 
 export class PluginManager {
   private plugins: Map<string, Plugin> = new Map()
-  
+
   register(plugin: Plugin) {
     if (this.plugins.has(plugin.id)) {
       throw new Error(`Plugin ${plugin.id} already exists`)
     }
-    
+
     this.validatePlugin(plugin)
     this.plugins.set(plugin.id, plugin)
   }
-  
+
   unregister(pluginId: string) {
     this.plugins.delete(pluginId)
   }
-  
+
   getPlugin(pluginId: string) {
     return this.plugins.get(pluginId)
   }
-  
+
   private validatePlugin(plugin: Plugin) {
     // 验证插件格式和必要属性
     const required = ['id', 'name', 'version', 'install']
@@ -438,7 +438,7 @@ export const MarkdownExtensionPlugin: Plugin = {
   name: 'Markdown Extension',
   version: '1.0.0',
   description: 'Enhanced Markdown support',
-  
+
   install(app) {
     app.component('markdown-preview', {
       props: {
@@ -449,7 +449,7 @@ export const MarkdownExtensionPlugin: Plugin = {
       }
     })
   },
-  
+
   uninstall(app) {
     app.unmount('markdown-preview')
   }
@@ -552,10 +552,10 @@ http.interceptors.request.use(config => {
 // utils/monitor.ts
 export class PerformanceMonitor {
   private metrics: any = {}
-  
+
   trackPageLoad() {
     const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
-    
+
     this.metrics.pageLoad = {
       dnsLookup: navigation.domainLookupEnd - navigation.domainLookupStart,
       tcpConnection: navigation.connectEnd - navigation.connectStart,
@@ -564,10 +564,10 @@ export class PerformanceMonitor {
       domReady: navigation.domContentLoadedEventEnd - navigation.navigationStart
     }
   }
-  
+
   trackResourceLoad() {
     const resources = performance.getEntriesByType('resource')
-    
+
     this.metrics.resources = resources.map(resource => ({
       name: resource.name,
       type: resource.initiatorType,
@@ -575,7 +575,7 @@ export class PerformanceMonitor {
       size: resource.transferSize
     }))
   }
-  
+
   report() {
     // 上报性能数据
     return http.post('/statistics/performance', this.metrics)
@@ -588,12 +588,12 @@ export class PerformanceMonitor {
 // utils/error-handler.ts
 export class ErrorHandler {
   private errors: any[] = []
-  
+
   setup() {
     window.addEventListener('error', this.handleError.bind(this))
     window.addEventListener('unhandledrejection', this.handlePromiseError.bind(this))
   }
-  
+
   private handleError(event: ErrorEvent) {
     this.errors.push({
       type: 'error',
@@ -604,10 +604,10 @@ export class ErrorHandler {
       stack: event.error?.stack,
       timestamp: new Date().toISOString()
     })
-    
+
     this.report()
   }
-  
+
   private handlePromiseError(event: PromiseRejectionEvent) {
     this.errors.push({
       type: 'unhandledrejection',
@@ -615,10 +615,10 @@ export class ErrorHandler {
       stack: event.reason?.stack,
       timestamp: new Date().toISOString()
     })
-    
+
     this.report()
   }
-  
+
   private report() {
     if (this.errors.length > 0) {
       http.post('/statistics/errors', this.errors)
@@ -627,4 +627,4 @@ export class ErrorHandler {
   }
 }
 ```
-``` 
+```

@@ -93,4 +93,33 @@ Thumbs.db
 *.tmp
 *.swp
 .env.local
-node_modules/ 
+node_modules/
+
+# 安全检查生成的文件
+bandit-results.json
+bandit-results.sarif
+safety-results.json
+pip-audit-results.json
+semgrep-results.sarif
+secrets-results.json
+dodgy-results.txt
+security-checks-results.txt
+security-report.md
+security-findings.txt
+sql-injection-results.txt
+sql_injection_files.txt
+
+# Swagger 生成的文件
+swagger.json
+swagger.yaml
+redoc.html
+
+# 其他安全相关文件
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.mypy_cache/

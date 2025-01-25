@@ -2,7 +2,7 @@
 
 -- 创建数据库
 CREATE DATABASE blog_db
-    WITH 
+    WITH
     OWNER = postgres
     ENCODING = 'UTF8'
     TABLESPACE = pg_default

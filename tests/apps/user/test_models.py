@@ -1,11 +1,14 @@
-import pytest
+import datetime
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.utils import timezone
-import datetime
+
+import pytest
 
 User = get_user_model()
+
 
 @pytest.mark.django_db
 @pytest.mark.unit
@@ -17,7 +20,7 @@ class TestUserModel:
             "email": "test@example.com",
             "password": "testpass123",
             "nickname": "Test User",
-            "bio": "This is a test user"
+            "bio": "This is a test user",
         }
 
     def test_create_user(self, user_data):
@@ -65,9 +68,7 @@ class TestUserModel:
     def test_optional_fields(self):
         """测试可选字段"""
         user = User.objects.create_user(
-            username="minimaluser",
-            email="minimal@example.com",
-            password="testpass123"
+            username="minimaluser", email="minimal@example.com", password="testpass123"
         )
         assert user.nickname == ""  # 默认值
         assert user.bio == ""  # 默认值
@@ -79,17 +80,14 @@ class TestUserModel:
         user1 = User.objects.create_user(**user_data)
         user1.date_joined = timezone.now() - datetime.timedelta(hours=1)
         user1.save()
-        
+
         # 创建第二个用户
         user2_data = user_data.copy()
-        user2_data.update({
-            "username": "testuser2",
-            "email": "test2@example.com"
-        })
+        user2_data.update({"username": "testuser2", "email": "test2@example.com"})
         user2 = User.objects.create_user(**user2_data)
         user2.date_joined = timezone.now()
         user2.save()
-        
+
         users = User.objects.all()
         assert users[0] == user2  # 后创建的用户应该在前面
-        assert users[1] == user1 
+        assert users[1] == user1

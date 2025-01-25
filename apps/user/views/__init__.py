@@ -1,19 +1,11 @@
-from .auth import (
-    LoginView,
-    TokenRefreshView,
-    LogoutView
-)
-from .user import (
-    UserRegisterView,
-    UserProfileView,
-    PasswordChangeView
-)
+from .auth import LoginView, LogoutView, TokenRefreshView
+from .user import PasswordChangeView, UserProfileView, UserRegisterView
 
 __all__ = [
-    'LoginView',
-    'TokenRefreshView',
-    'LogoutView',
-    'UserRegisterView',
-    'UserProfileView',
-    'PasswordChangeView'
-] 
+    "LoginView",
+    "TokenRefreshView",
+    "LogoutView",
+    "UserRegisterView",
+    "UserProfileView",
+    "PasswordChangeView",
+]

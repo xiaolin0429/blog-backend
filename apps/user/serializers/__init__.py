@@ -1,19 +1,15 @@
+from .auth import LoginResponseSerializer, LogoutSerializer, PasswordChangeSerializer
 from .user import (
-    UserRegisterSerializer,
     UserProfileSerializer,
-    UserProfileUpdateSerializer
-)
-from .auth import (
-    PasswordChangeSerializer,
-    LoginResponseSerializer,
-    LogoutSerializer
+    UserProfileUpdateSerializer,
+    UserRegisterSerializer,
 )
 
 __all__ = [
-    'UserRegisterSerializer',
-    'UserProfileSerializer',
-    'UserProfileUpdateSerializer',
-    'PasswordChangeSerializer',
-    'LoginResponseSerializer',
-    'LogoutSerializer'
-] 
+    "LoginResponseSerializer",
+    "LogoutSerializer",
+    "PasswordChangeSerializer",
+    "UserRegisterSerializer",
+    "UserProfileSerializer",
+    "UserProfileUpdateSerializer",
+]

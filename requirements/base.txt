@@ -39,4 +39,4 @@ packaging>=22.0
 
 # API Documentation
 coreapi==2.3.3
-coreschema==0.0.4 
+coreschema==0.0.4

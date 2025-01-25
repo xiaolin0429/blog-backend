@@ -1,9 +1,12 @@
-import pytest
 from django.contrib.auth import get_user_model
+
+import pytest
 from rest_framework.test import APIRequestFactory
+
 from apps.core.permissions import IsAdminUserOrReadOnly
 
 User = get_user_model()
+
 
 @pytest.mark.django_db
 @pytest.mark.unit
@@ -19,17 +22,13 @@ class TestIsAdminUserOrReadOnly:
     @pytest.fixture
     def normal_user(self):
         return User.objects.create_user(
-            username="normal_user",
-            email="normal@example.com",
-            password="testpass123"
+            username="normal_user", email="normal@example.com", password="testpass123"
         )
 
     @pytest.fixture
     def admin_user(self):
         return User.objects.create_superuser(
-            username="admin_user",
-            email="admin@example.com",
-            password="testpass123"
+            username="admin_user", email="admin@example.com", password="testpass123"
         )
 
     @pytest.fixture
@@ -38,7 +37,7 @@ class TestIsAdminUserOrReadOnly:
             username="staff_user",
             email="staff@example.com",
             password="testpass123",
-            is_staff=True
+            is_staff=True,
         )
 
     def test_safe_methods_allowed_for_anonymous(self, permission, rf):
@@ -81,4 +80,4 @@ class TestIsAdminUserOrReadOnly:
         for method in ["post", "put", "patch", "delete"]:
             request = getattr(rf, method)("/")
             request.user = admin_user
-            assert permission.has_permission(request, None) 
+            assert permission.has_permission(request, None)

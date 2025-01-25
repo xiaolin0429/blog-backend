@@ -65,19 +65,19 @@ blog/
 ```python
 class CacheBackend:
     """缓存后端接口"""
-    
+
     def get(self, key: str) -> Any:
         """获取缓存"""
         raise NotImplementedError
-    
+
     def set(self, key: str, value: Any, timeout: int = None) -> bool:
         """设置缓存"""
         raise NotImplementedError
-    
+
     def delete(self, key: str) -> bool:
         """删除缓存"""
         raise NotImplementedError
-    
+
     def clear(self) -> bool:
         """清空缓存"""
         raise NotImplementedError
@@ -87,19 +87,19 @@ class CacheBackend:
 ```python
 class LocalCache(CacheBackend):
     """基于Django缓存框架的本地缓存实现"""
-    
+
     def __init__(self):
         self.cache = caches['default']
-    
+
     def get(self, key: str) -> Any:
         return self.cache.get(key)
-    
+
     def set(self, key: str, value: Any, timeout: int = None) -> bool:
         return self.cache.set(key, value, timeout)
-    
+
     def delete(self, key: str) -> bool:
         return self.cache.delete(key)
-    
+
     def clear(self) -> bool:
         return self.cache.clear()
 ```
@@ -108,20 +108,20 @@ class LocalCache(CacheBackend):
 ```python
 class CacheService:
     """缓存服务"""
-    
+
     def __init__(self, backend: CacheBackend = None):
         self.backend = backend or LocalCache()
-    
+
     def get_post(self, post_id: int) -> dict:
         """获取文章缓存"""
         key = f'post:{post_id}'
         return self.backend.get(key)
-    
+
     def set_post(self, post_id: int, data: dict, timeout: int = None) -> bool:
         """设置文章缓存"""
         key = f'post:{post_id}'
         return self.backend.set(key, data, timeout)
-    
+
     def clear_post(self, post_id: int) -> bool:
         """清除文章缓存"""
         key = f'post:{post_id}'
@@ -136,17 +136,17 @@ class PostViewSet(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         cache_service = CacheService()
         post_id = kwargs['pk']
-        
+
         # 尝试从缓存获取
         cached_data = cache_service.get_post(post_id)
         if cached_data:
             return Response(cached_data)
-        
+
         # 缓存未命中，从数据库获取
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         data = serializer.data
-        
+
         # 设置缓存
         cache_service.set_post(post_id, data, timeout=3600)
         return Response(data)
@@ -156,15 +156,15 @@ class PostViewSet(viewsets.ModelViewSet):
 ```python
 class SessionService:
     """会话服务"""
-    
+
     def __init__(self, backend: CacheBackend = None):
         self.backend = backend or LocalCache()
-    
+
     def get_session(self, session_id: str) -> dict:
         """获取会话数据"""
         key = f'session:{session_id}'
         return self.backend.get(key)
-    
+
     def set_session(self, session_id: str, data: dict, timeout: int = None) -> bool:
         """设置会话数据"""
         key = f'session:{session_id}'
@@ -177,13 +177,13 @@ class SessionService:
 ```python
 class RedisCache(CacheBackend):
     """Redis缓存实现示例"""
-    
+
     def __init__(self, redis_client):
         self.redis = redis_client
-    
+
     def get(self, key: str) -> Any:
         return self.redis.get(key)
-    
+
     def set(self, key: str, value: Any, timeout: int = None) -> bool:
         return self.redis.set(key, value, ex=timeout)
 ```
@@ -192,11 +192,11 @@ class RedisCache(CacheBackend):
 ```python
 class DistributedLock:
     """分布式锁接口"""
-    
+
     def acquire(self, key: str, timeout: int = None) -> bool:
         """获取锁"""
         raise NotImplementedError
-    
+
     def release(self, key: str) -> bool:
         """释放锁"""
         raise NotImplementedError
@@ -206,13 +206,13 @@ class DistributedLock:
 ```python
 class MessageQueue:
     """消息队列接口"""
-    
+
     def publish(self, channel: str, message: Any) -> bool:
         """发布消息"""
         raise NotImplementedError
-    
+
     def subscribe(self, channel: str) -> Any:
         """订阅消息"""
         raise NotImplementedError
 ```
-``` 
+```

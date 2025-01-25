@@ -1,5 +1,3 @@
 from .user import UserAdmin
 
-__all__ = [
-    'UserAdmin'
-] 
+__all__ = ["UserAdmin"]

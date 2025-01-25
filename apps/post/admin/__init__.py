@@ -1,11 +1,6 @@
 from .category import CategoryAdmin
-from .tag import TagAdmin
 from .comment import CommentAdmin
 from .post import PostAdmin
+from .tag import TagAdmin
 
-__all__ = [
-    'CategoryAdmin',
-    'TagAdmin',
-    'CommentAdmin',
-    'PostAdmin'
-] 
+__all__ = ["CategoryAdmin", "TagAdmin", "CommentAdmin", "PostAdmin"]
