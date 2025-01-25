@@ -27,268 +27,276 @@ jobs:
   security:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
 
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements/dev.txt
-        pip install bandit safety semgrep pylint dodgy detect-secrets pip-audit
-        pip install allure-pytest
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/dev.txt
+          pip install bandit safety semgrep pylint dodgy detect-secrets pip-audit
+          pip install allure-pytest
 
-    - name: Run Security Checks
-      run: |
-        echo "Running comprehensive security analysis..."
+      - name: Run Security Checks
+        run: |
+          echo "Running comprehensive security analysis..."
 
-        # Bandit - Python 安全检查
-        echo "Running Bandit security checks..."
-        bandit -r . -ll --exclude './.venv,./tests' -f json -o bandit-results.json || true
-        bandit -r . -ll --exclude './.venv,./tests' -f sarif -o bandit-results.sarif || true
+          # Bandit - Python 安全检查
+          echo "Running Bandit security checks..."
+          bandit -r . -ll --exclude './.venv,./tests' -f json -o bandit-results.json || true
+          bandit -r . -ll --exclude './.venv,./tests' -f sarif -o bandit-results.sarif || true
 
-        # Safety - 依赖包安全检查
-        echo "Running Safety dependency checks..."
-        safety check --output json > safety-results.json || true
+          # Safety - 依赖包安全检查
+          echo "Running Safety dependency checks..."
+          safety check --output json > safety-results.json || true
 
-        # pip-audit - 更详细的依赖包安全审计
-        echo "Running pip-audit checks..."
-        pip-audit --format json > pip-audit-results.json || true
+          # pip-audit - 更详细的依赖包安全审计
+          echo "Running pip-audit checks..."
+          pip-audit --format json > pip-audit-results.json || true
 
-        # Semgrep - 代码模式分析
-        echo "Running Semgrep checks..."
-        semgrep --config "p/python" --config "p/django" --config "p/sql-injection" \
-          --config "p/owasp-top-ten" --config "p/security-audit" \
-          . --exclude "tests/*" --exclude ".venv/*" --sarif > semgrep-results.sarif || true
+          # Semgrep - 代码模式分析
+          echo "Running Semgrep checks..."
+          semgrep --config "p/python" --config "p/django" --config "p/sql-injection" \
+            --config "p/owasp-top-ten" --config "p/security-audit" \
+            . --exclude "tests/*" --exclude ".venv/*" --sarif > semgrep-results.sarif || true
 
-        # detect-secrets - 敏感信息检测
-        echo "Running detect-secrets scan..."
-        detect-secrets scan --all-files --exclude-files 'tests/.*' --exclude-files '.venv/.*' > secrets-results.json || true
+          # detect-secrets - 敏感信息检测
+          echo "Running detect-secrets scan..."
+          detect-secrets scan --all-files --exclude-files 'tests/.*' --exclude-files '.venv/.*' > secrets-results.json || true
 
-        # dodgy - 可疑代码检测
-        echo "Running dodgy checks..."
-        dodgy --ignore-paths=.venv,tests > dodgy-results.txt || true
+          # dodgy - 可疑代码检测
+          echo "Running dodgy checks..."
+          dodgy --ignore-paths=.venv,tests > dodgy-results.txt || true
 
-        # 自定义 SQL 注入和安全风险检查
-        echo "Running custom security checks..."
-        {
-          echo "=== SQL Injection Checks ==="
+          # 自定义 SQL 注入和安全风险检查
+          echo "Running custom security checks..."
+          {
+            echo "=== SQL Injection Checks ==="
 
-          echo "Checking for string formatting in SQL queries..."
-          find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "execute.*%" {} \; | while read file; do
-            echo "Potential SQL injection risk (string formatting) in: $file"
-            grep -n "execute.*%" "$file"
-          done
+            echo "Checking for string formatting in SQL queries..."
+            find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "execute.*%" {} \; | while read file; do
+              echo "Potential SQL injection risk (string formatting) in: $file"
+              grep -n "execute.*%" "$file"
+            done
 
-          echo "Checking for string concatenation in SQL queries..."
-          find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "execute.*+.*" {} \; | while read file; do
-            echo "Potential SQL injection risk (string concatenation) in: $file"
-            grep -n "execute.*+.*" "$file"
-          done
+            echo "Checking for string concatenation in SQL queries..."
+            find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "execute.*+.*" {} \; | while read file; do
+              echo "Potential SQL injection risk (string concatenation) in: $file"
+              grep -n "execute.*+.*" "$file"
+            done
 
-          echo "Checking for format method in SQL queries..."
-          find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "execute.*format" {} \; | while read file; do
-            echo "Potential SQL injection risk (format method) in: $file"
-            grep -n "execute.*format" "$file"
-          done
+            echo "Checking for format method in SQL queries..."
+            find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "execute.*format" {} \; | while read file; do
+              echo "Potential SQL injection risk (format method) in: $file"
+              grep -n "execute.*format" "$file"
+            done
 
-          echo "=== Other Security Checks ==="
+            echo "=== Other Security Checks ==="
 
-          echo "Checking for hardcoded secrets..."
-          find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "password.*=.*['\"]" {} \; | while read file; do
-            echo "Potential hardcoded secret in: $file"
-            grep -n "password.*=.*['\"]" "$file"
-          done
+            echo "Checking for hardcoded secrets..."
+            find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "password.*=.*['\"]" {} \; | while read file; do
+              echo "Potential hardcoded secret in: $file"
+              grep -n "password.*=.*['\"]" "$file"
+            done
 
-          echo "Checking for unsafe pickle usage..."
-          find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "pickle\.loads" {} \; | while read file; do
-            echo "Potential unsafe pickle usage in: $file"
-            grep -n "pickle\.loads" "$file"
-          done
+            echo "Checking for unsafe pickle usage..."
+            find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "pickle\.loads" {} \; | while read file; do
+              echo "Potential unsafe pickle usage in: $file"
+              grep -n "pickle\.loads" "$file"
+            done
 
-          echo "Checking for unsafe yaml usage..."
-          find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "yaml\.load(" {} \; | while read file; do
-            echo "Potential unsafe yaml usage in: $file"
-            grep -n "yaml\.load(" "$file"
-          done
+            echo "Checking for unsafe yaml usage..."
+            find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "yaml\.load(" {} \; | while read file; do
+              echo "Potential unsafe yaml usage in: $file"
+              grep -n "yaml\.load(" "$file"
+            done
 
-          echo "Checking for eval usage..."
-          find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "eval(" {} \; | while read file; do
-            echo "Potential unsafe eval usage in: $file"
-            grep -n "eval(" "$file"
-          done
-        } > security-checks-results.txt
+            echo "Checking for eval usage..."
+            find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "eval(" {} \; | while read file; do
+              echo "Potential unsafe eval usage in: $file"
+              grep -n "eval(" "$file"
+            done
+          } > security-checks-results.txt
 
-    - name: Generate Security Report
-      run: |
-        echo "Generating comprehensive security report..."
-        {
-          echo "# Security Scan Report"
-          echo "## Summary"
-          echo "Scan completed at: $(date)"
-          echo
+      - name: Generate Security Report
+        run: |
+          echo "Generating comprehensive security report..."
+          {
+            echo "# Security Scan Report"
+            echo "## Summary"
+            echo "Scan completed at: $(date)"
+            echo
 
-          echo "## Bandit Results"
-          if [ -f bandit-results.json ]; then
-            issues_count=$(jq '.results | length' bandit-results.json)
-            echo "Found $issues_count potential security issues"
-            if [ "$issues_count" -gt 0 ]; then
+            echo "## Bandit Results"
+            if [ -f bandit-results.json ] && [ -s bandit-results.json ]; then
+              issues_count=$(jq -r '.results | length // 0' bandit-results.json)
+              echo "Found $issues_count potential security issues"
+              if [ "$issues_count" -gt 0 ]; then
+                echo "\`\`\`"
+                jq -r '.results[] | "- [\(.issue_severity)] \(.issue_text) in \(.filename):\(.line_number)"' bandit-results.json || echo "Error parsing Bandit results"
+                echo "\`\`\`"
+              fi
+            fi
+
+            echo
+            echo "## Dependency Security"
+            if [ -f safety-results.json ] && [ -s safety-results.json ]; then
+              vuln_count=$(jq -r '. | length // 0' safety-results.json)
+              echo "Found $vuln_count vulnerable dependencies"
+              if [ "$vuln_count" -gt 0 ]; then
+                echo "\`\`\`"
+                jq -r '.[] | "- \(.package): \(.vulnerability)"' safety-results.json || echo "Error parsing Safety results"
+                echo "\`\`\`"
+              fi
+            fi
+
+            echo
+            echo "## Code Pattern Analysis"
+            if [ -f semgrep-results.sarif ] && [ -s semgrep-results.sarif ]; then
+              rules_count=$(jq -r '.runs[0].results | length // 0' semgrep-results.sarif)
+              echo "Found $rules_count pattern matches"
+              if [ "$rules_count" -gt 0 ]; then
+                echo "\`\`\`"
+                jq -r '.runs[0].results[] | "- [\(.level)] \(.message.text) in \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine)"' semgrep-results.sarif || echo "Error parsing Semgrep results"
+                echo "\`\`\`"
+              fi
+            fi
+
+            echo
+            echo "## Custom Security Checks"
+            if [ -f security-checks-results.txt ]; then
               echo "\`\`\`"
-              jq -r '.results[] | "- [\(.issue_severity)] \(.issue_text) in \(.filename):\(.line_number)"' bandit-results.json
+              cat security-checks-results.txt
               echo "\`\`\`"
             fi
+
+          } > security-report.md
+
+      - name: Check Security Results
+        id: check_results
+        run: |
+          echo "Analyzing security check results..."
+
+          exit_code=0
+          findings=()
+
+          # 检查 Bandit 结果
+          if [ -f bandit-results.json ] && [ "$(jq '.results | length' bandit-results.json)" -gt 0 ]; then
+            findings+=("⚠️ Bandit found $(jq '.results | length' bandit-results.json) security issues")
+            exit_code=1
           fi
 
-          echo
-          echo "## Dependency Security"
-          if [ -f safety-results.json ]; then
-            vuln_count=$(jq '. | length' safety-results.json)
-            echo "Found $vuln_count vulnerable dependencies"
-            if [ "$vuln_count" -gt 0 ]; then
-              echo "\`\`\`"
-              jq -r '.[] | "- \(.package): \(.vulnerability)"' safety-results.json
-              echo "\`\`\`"
-            fi
+          # 检查 Safety 结果
+          if [ -f safety-results.json ] && [ "$(jq '. | length' safety-results.json)" -gt 0 ]; then
+            findings+=("⚠️ Safety found $(jq '. | length' safety-results.json) vulnerable dependencies")
+            exit_code=1
           fi
 
-          echo
-          echo "## Code Pattern Analysis"
-          if [ -f semgrep-results.sarif ]; then
-            rules_count=$(jq '.runs[0].results | length' semgrep-results.sarif)
-            echo "Found $rules_count pattern matches"
-            if [ "$rules_count" -gt 0 ]; then
-              echo "\`\`\`"
-              jq -r '.runs[0].results[] | "- [\(.level)] \(.message.text) in \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine)"' semgrep-results.sarif
-              echo "\`\`\`"
-            fi
+          # 检查 Semgrep 结果
+          if [ -f semgrep-results.sarif ] && [ "$(jq '.runs[0].results | length' semgrep-results.sarif)" -gt 0 ]; then
+            findings+=("⚠️ Semgrep found $(jq '.runs[0].results | length' semgrep-results.sarif) code pattern matches")
+            exit_code=1
           fi
 
-          echo
-          echo "## Custom Security Checks"
-          if [ -f security-checks-results.txt ]; then
-            echo "\`\`\`"
-            cat security-checks-results.txt
-            echo "\`\`\`"
+          # 检查自定义安全检查结果
+          if [ -s security-checks-results.txt ]; then
+            findings+=("⚠️ Custom checks found potential security risks")
+            exit_code=1
           fi
 
-        } > security-report.md
+          # 保存结果用于通知
+          if [ ${#findings[@]} -gt 0 ]; then
+            printf '%s\n' "${findings[@]}" > security-findings.txt
+          fi
 
-    - name: Check Security Results
-      id: check_results
-      run: |
-        echo "Analyzing security check results..."
+          # 设置输出变量
+          echo "has_issues=$([[ $exit_code -eq 1 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
 
-        exit_code=0
-        findings=()
-
-        # 检查 Bandit 结果
-        if [ -f bandit-results.json ] && [ "$(jq '.results | length' bandit-results.json)" -gt 0 ]; then
-          findings+=("⚠️ Bandit found $(jq '.results | length' bandit-results.json) security issues")
-          exit_code=1
-        fi
-
-        # 检查 Safety 结果
-        if [ -f safety-results.json ] && [ "$(jq '. | length' safety-results.json)" -gt 0 ]; then
-          findings+=("⚠️ Safety found $(jq '. | length' safety-results.json) vulnerable dependencies")
-          exit_code=1
-        fi
-
-        # 检查 Semgrep 结果
-        if [ -f semgrep-results.sarif ] && [ "$(jq '.runs[0].results | length' semgrep-results.sarif)" -gt 0 ]; then
-          findings+=("⚠️ Semgrep found $(jq '.runs[0].results | length' semgrep-results.sarif) code pattern matches")
-          exit_code=1
-        fi
-
-        # 检查自定义安全检查结果
-        if [ -s security-checks-results.txt ]; then
-          findings+=("⚠️ Custom checks found potential security risks")
-          exit_code=1
-        fi
-
-        # 保存结果用于通知
-        if [ ${#findings[@]} -gt 0 ]; then
-          printf '%s\n' "${findings[@]}" > security-findings.txt
-        fi
-
-        # 设置输出变量
-        echo "has_issues=$([[ $exit_code -eq 1 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
-
-        if [ $exit_code -eq 1 ]; then
-          echo "❌ Security checks failed. Please review the findings above."
-          exit 1
-        else
-          echo "✅ All security checks passed!"
-        fi
-
-    - name: Upload Security Results
-      if: always()
-      uses: actions/upload-artifact@v3
-      with:
-        name: security-results
-        path: |
-          bandit-results.json
-          bandit-results.sarif
-          safety-results.json
-          pip-audit-results.json
-          semgrep-results.sarif
-          secrets-results.json
-          dodgy-results.txt
-          security-checks-results.txt
-          security-report.md
-
-    - name: Upload SARIF results
-      if: always()
-      uses: github/codeql-action/upload-sarif@v2
-      with:
-        sarif_file: semgrep-results.sarif
-        category: semgrep
-
-    - name: Store Security Results
-      if: github.event_name == 'schedule'
-      uses: actions/upload-artifact@v3
-      with:
-        name: security-trend-${{ github.sha }}
-        path: |
-          bandit-results.json
-          safety-results.json
-          semgrep-results.sarif
-        retention-days: 90
-
-    - name: Send Notifications
-      if: always()
-      run: |
-        if [ -n "$SLACK_WEBHOOK" ]; then
-          # 准备 Slack 消息
-          message="Security Scan Results for ${{ github.repository }}\n"
-          if [ -f security-findings.txt ]; then
-            message+="Found security issues:\n$(cat security-findings.txt)"
+          if [ $exit_code -eq 1 ]; then
+            echo "❌ Security checks failed. Please review the findings above."
+            exit 1
           else
-            message+="✅ All security checks passed!"
+            echo "✅ All security checks passed!"
           fi
 
-          # 发送到 Slack
-          curl -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"$message\"}" \
-            $SLACK_WEBHOOK
-        fi
+      - name: Upload Security Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-results
+          path: |
+            bandit-results.json
+            bandit-results.sarif
+            safety-results.json
+            pip-audit-results.json
+            semgrep-results.sarif
+            secrets-results.json
+            dodgy-results.txt
+            security-checks-results.txt
+            security-report.md
 
-        if [ -n "$EMAIL_NOTIFICATION" ]; then
-          # 发送邮件通知
-          if [ -f security-report.md ]; then
-            mail -s "Security Scan Results - ${{ github.repository }}" \
-              $EMAIL_NOTIFICATION < security-report.md
+      - name: Upload SARIF results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: semgrep-results.sarif
+          category: semgrep
+
+      - name: Store Security Results
+        if: github.event_name == 'schedule'
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-trend-${{ github.sha }}
+          path: |
+            bandit-results.json
+            safety-results.json
+            semgrep-results.sarif
+          retention-days: 90
+
+      - name: Send Notifications
+        if: always()
+        run: |
+          # 安装邮件客户端
+          sudo apt-get update && sudo apt-get install -y mailutils
+
+          if [ -n "$SLACK_WEBHOOK" ]; then
+            # 准备 Slack 消息
+            message="Security Scan Results for ${{ github.repository }}\n"
+            if [ -f security-findings.txt ]; then
+              message+="Found security issues:\n$(cat security-findings.txt)"
+            else
+              message+="✅ All security checks passed!"
+            fi
+
+            # 发送到 Slack
+            curl -X POST -H 'Content-type: application/json' \
+              --data "{\"text\":\"$message\"}" \
+              $SLACK_WEBHOOK || echo "Failed to send Slack notification"
           fi
-        fi
+
+          if [ -n "$EMAIL_NOTIFICATION" ]; then
+            # 发送邮件通知
+            if [ -f security-report.md ]; then
+              {
+                echo "Subject: Security Scan Results - ${{ github.repository }}"
+                echo "MIME-Version: 1.0"
+                echo "Content-Type: text/plain; charset=UTF-8"
+                echo
+                cat security-report.md
+              } | sendmail $EMAIL_NOTIFICATION || echo "Failed to send email notification"
+            fi
+          fi
 
   test:
-    needs: security
+    if: always()
     runs-on: ubuntu-latest
 
     services:
@@ -316,140 +324,140 @@ jobs:
           --health-retries 5
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      with:
-        fetch-depth: 0
+      - name: Checkout Repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          fetch-depth: 0
 
-    - name: Set up Python
-      uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435 # v4.5.0
-      with:
-        python-version: '3.10'
-        cache: 'pip'
-        check-latest: true
+      - name: Set up Python
+        uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435 # v4.5.0
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          check-latest: true
 
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements/dev.txt
-        pip install allure-pytest
-        pip install bandit safety semgrep
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/dev.txt
+          pip install allure-pytest
+          pip install bandit safety semgrep
 
-    - name: Run Security Checks
-      run: |
-        echo "Running Bandit security checks..."
-        bandit -r . -ll --exclude './.venv,./tests' -f json -o bandit-results.json || true
+      - name: Run Security Checks
+        run: |
+          echo "Running Bandit security checks..."
+          bandit -r . -ll --exclude './.venv,./tests' -f json -o bandit-results.json || true
 
-        echo "Running Safety dependency checks..."
-        safety check --output json > safety-results.json || true
+          echo "Running Safety dependency checks..."
+          safety check --output json > safety-results.json || true
 
-        echo "Running SQL injection checks with Semgrep..."
-        semgrep --config "p/sql-injection" . --exclude "tests/*" --exclude ".venv/*" --json > semgrep-results.json || true
+          echo "Running SQL injection checks with Semgrep..."
+          semgrep --config "p/sql-injection" . --exclude "tests/*" --exclude ".venv/*" --json > semgrep-results.json || true
 
-        echo "Running custom SQL injection pattern checks..."
-        {
-          echo "Checking for string formatting in SQL queries..."
-          find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "execute.*%" {} \; | while read file; do
-            echo "Potential SQL injection risk (string formatting) in: $file"
-            grep -n "execute.*%" "$file"
-          done
+          echo "Running custom SQL injection pattern checks..."
+          {
+            echo "Checking for string formatting in SQL queries..."
+            find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "execute.*%" {} \; | while read file; do
+              echo "Potential SQL injection risk (string formatting) in: $file"
+              grep -n "execute.*%" "$file"
+            done
 
-          echo "Checking for string concatenation in SQL queries..."
-          find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "execute.*+.*" {} \; | while read file; do
-            echo "Potential SQL injection risk (string concatenation) in: $file"
-            grep -n "execute.*+.*" "$file"
-          done
+            echo "Checking for string concatenation in SQL queries..."
+            find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "execute.*+.*" {} \; | while read file; do
+              echo "Potential SQL injection risk (string concatenation) in: $file"
+              grep -n "execute.*+.*" "$file"
+            done
 
-          echo "Checking for format method in SQL queries..."
-          find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "execute.*format" {} \; | while read file; do
-            echo "Potential SQL injection risk (format method) in: $file"
-            grep -n "execute.*format" "$file"
-          done
-        } > sql-injection-results.txt
+            echo "Checking for format method in SQL queries..."
+            find . -type f -name "*.py" ! -path "./.venv/*" ! -path "./tests/*" -exec grep -l "execute.*format" {} \; | while read file; do
+              echo "Potential SQL injection risk (format method) in: $file"
+              grep -n "execute.*format" "$file"
+            done
+          } > sql-injection-results.txt
 
-    - name: Check Security Results
-      run: |
-        echo "Analyzing security check results..."
+      - name: Check Security Results
+        run: |
+          echo "Analyzing security check results..."
 
-        # 检查 Bandit 结果
-        if [ -f bandit-results.json ] && [ "$(jq '.results | length' bandit-results.json)" -gt 0 ]; then
-          echo "⚠️ Bandit found potential security issues"
-          jq -r '.results[] | "File: \(.filename):\(.line_number) - \(.issue_text)"' bandit-results.json
-          exit_code=1
-        fi
+          # 检查 Bandit 结果
+          if [ -f bandit-results.json ] && [ "$(jq '.results | length' bandit-results.json)" -gt 0 ]; then
+            echo "⚠️ Bandit found potential security issues"
+            jq -r '.results[] | "File: \(.filename):\(.line_number) - \(.issue_text)"' bandit-results.json
+            exit_code=1
+          fi
 
-        # 检查 Safety 结果
-        if [ -f safety-results.json ] && [ "$(jq '. | length' safety-results.json)" -gt 0 ]; then
-          echo "⚠️ Safety found vulnerable dependencies"
-          jq -r '.[] | "Package: \(.package) - \(.vulnerability)"' safety-results.json
-          exit_code=1
-        fi
+          # 检查 Safety 结果
+          if [ -f safety-results.json ] && [ "$(jq '. | length' safety-results.json)" -gt 0 ]; then
+            echo "⚠️ Safety found vulnerable dependencies"
+            jq -r '.[] | "Package: \(.package) - \(.vulnerability)"' safety-results.json
+            exit_code=1
+          fi
 
-        # 检查 Semgrep 结果
-        if [ -f semgrep-results.json ] && [ "$(jq '.results | length' semgrep-results.json)" -gt 0 ]; then
-          echo "⚠️ Semgrep found potential SQL injection vulnerabilities"
-          jq -r '.results[] | "File: \(.path):\(.start.line) - \(.extra.message)"' semgrep-results.json
-          exit_code=1
-        fi
+          # 检查 Semgrep 结果
+          if [ -f semgrep-results.json ] && [ "$(jq '.results | length' semgrep-results.json)" -gt 0 ]; then
+            echo "⚠️ Semgrep found potential SQL injection vulnerabilities"
+            jq -r '.results[] | "File: \(.path):\(.start.line) - \(.extra.message)"' semgrep-results.json
+            exit_code=1
+          fi
 
-        # 检查自定义 SQL 注入检查结果
-        if [ -s sql-injection-results.txt ]; then
-          echo "⚠️ Found potential SQL injection risks:"
-          cat sql-injection-results.txt
-          exit_code=1
-        fi
+          # 检查自定义 SQL 注入检查结果
+          if [ -s sql-injection-results.txt ]; then
+            echo "⚠️ Found potential SQL injection risks:"
+            cat sql-injection-results.txt
+            exit_code=1
+          fi
 
-        # 如果设置了 exit_code，则退出构建
-        if [ "${exit_code:-0}" -eq 1 ]; then
-          echo "❌ Security checks failed. Please review the findings above."
-          exit 1
-        else
-          echo "✅ All security checks passed!"
-        fi
+          # 如果设置了 exit_code，则退出构建
+          if [ "${exit_code:-0}" -eq 1 ]; then
+            echo "❌ Security checks failed. Please review the findings above."
+            exit 1
+          else
+            echo "✅ All security checks passed!"
+          fi
 
-    - name: Run Tests
-      env:
-        DJANGO_SETTINGS_MODULE: config.settings.test
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-        REDIS_URL: redis://localhost:6379/0
-      run: |
-        python -m pytest tests/ --alluredir=./allure-results --clean-alluredir
+      - name: Run Tests
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.test
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          python -m pytest tests/ --alluredir=./allure-results --clean-alluredir
 
-    - name: Get Allure history
-      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      if: always()
-      continue-on-error: true
-      with:
-        ref: gh-pages
-        path: gh-pages
+      - name: Get Allure history
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        if: always()
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: gh-pages
 
-    - name: Generate Allure Report
-      if: always()
-      run: |
-        curl -o allure-2.23.1.tgz -OL https://repo.maven.apache.org/maven2/io/qameta/allure/allure-commandline/2.23.1/allure-commandline-2.23.1.tgz
-        tar -zxvf allure-2.23.1.tgz -C /opt/
-        ln -s /opt/allure-2.23.1/bin/allure /usr/local/bin/allure
-        allure generate allure-results --clean -o allure-history
+      - name: Generate Allure Report
+        if: always()
+        run: |
+          curl -o allure-2.23.1.tgz -OL https://repo.maven.apache.org/maven2/io/qameta/allure/allure-commandline/2.23.1/allure-commandline-2.23.1.tgz
+          tar -zxvf allure-2.23.1.tgz -C /opt/
+          ln -s /opt/allure-2.23.1/bin/allure /usr/local/bin/allure
+          allure generate allure-results --clean -o allure-history
 
-    - name: Upload Security Results
-      if: always()
-      uses: actions/upload-artifact@v3
-      with:
-        name: security-results
-        path: |
-          bandit-results.json
-          safety-results.json
-          semgrep-results.json
-          sql-injection-results.txt
+      - name: Upload Security Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-results
+          path: |
+            bandit-results.json
+            safety-results.json
+            semgrep-results.json
+            sql-injection-results.txt
 
-    - name: Deploy report to Github Pages
-      if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-      uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_branch: gh-pages
-        publish_dir: allure-history
-        full_commit_message: 'docs: update allure report'
-        user_name: 'github-actions[bot]'
-        user_email: 'github-actions[bot]@users.noreply.github.com'
-        force_orphan: true
+      - name: Deploy report to Github Pages
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history
+          full_commit_message: 'docs: update allure report'
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          force_orphan: true
