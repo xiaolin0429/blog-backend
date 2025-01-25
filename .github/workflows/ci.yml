@@ -396,7 +396,7 @@ jobs:
           python -m pytest tests/ --alluredir=./allure-results --clean-alluredir
 
       - name: Get Allure history
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         if: always()
         continue-on-error: true
         with:
@@ -424,7 +424,7 @@ jobs:
 
       - name: Deploy report to Github Pages
         if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        uses: peaceiris/actions-gh-pages@v3  # 确保使用最新版本
+        uses: peaceiris/actions-gh-pages@v3.9.3  # 使用固定版本
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
