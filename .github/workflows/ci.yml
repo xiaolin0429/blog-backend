@@ -25,15 +25,15 @@ env:
 
 jobs:
   security:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # 明确指定使用 ubuntu-24.04
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4  # 更新到 v4
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5  # 更新到 v5
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -141,48 +141,71 @@ jobs:
 
             echo "## Bandit Results"
             if [ -f bandit-results.json ] && [ -s bandit-results.json ]; then
-              issues_count=$(jq -r '.results | length // 0' bandit-results.json)
-              echo "Found $issues_count potential security issues"
-              if [ "$issues_count" -gt 0 ]; then
-                echo "\`\`\`"
-                jq -r '.results[] | "- [\(.issue_severity)] \(.issue_text) in \(.filename):\(.line_number)"' bandit-results.json || echo "Error parsing Bandit results"
-                echo "\`\`\`"
+              if jq empty bandit-results.json 2>/dev/null; then
+                issues_count=$(jq -r '.results | length // 0' bandit-results.json)
+                echo "Found $issues_count potential security issues"
+                if [ "$issues_count" -gt 0 ]; then
+                  echo "\`\`\`"
+                  jq -r '.results[] | "- [\(.issue_severity)] \(.issue_text) in \(.filename):\(.line_number)"' bandit-results.json || echo "Error parsing Bandit results"
+                  echo "\`\`\`"
+                fi
+              else
+                echo "Invalid JSON format in bandit-results.json"
               fi
+            else
+              echo "No Bandit results found or file is empty"
             fi
 
             echo
             echo "## Dependency Security"
             if [ -f safety-results.json ] && [ -s safety-results.json ]; then
-              vuln_count=$(jq -r '. | length // 0' safety-results.json)
-              echo "Found $vuln_count vulnerable dependencies"
-              if [ "$vuln_count" -gt 0 ]; then
-                echo "\`\`\`"
-                jq -r '.[] | "- \(.package): \(.vulnerability)"' safety-results.json || echo "Error parsing Safety results"
-                echo "\`\`\`"
+              if jq empty safety-results.json 2>/dev/null; then
+                vuln_count=$(jq -r '. | length // 0' safety-results.json)
+                echo "Found $vuln_count vulnerable dependencies"
+                if [ "$vuln_count" -gt 0 ]; then
+                  echo "\`\`\`"
+                  jq -r '.[] | "- \(.package): \(.vulnerability)"' safety-results.json || echo "Error parsing Safety results"
+                  echo "\`\`\`"
+                fi
+              else
+                echo "Invalid JSON format in safety-results.json"
               fi
+            else
+              echo "No Safety results found or file is empty"
             fi
 
             echo
             echo "## Code Pattern Analysis"
             if [ -f semgrep-results.sarif ] && [ -s semgrep-results.sarif ]; then
-              rules_count=$(jq -r '.runs[0].results | length // 0' semgrep-results.sarif)
-              echo "Found $rules_count pattern matches"
-              if [ "$rules_count" -gt 0 ]; then
-                echo "\`\`\`"
-                jq -r '.runs[0].results[] | "- [\(.level)] \(.message.text) in \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine)"' semgrep-results.sarif || echo "Error parsing Semgrep results"
-                echo "\`\`\`"
+              if jq empty semgrep-results.sarif 2>/dev/null; then
+                rules_count=$(jq -r '.runs[0].results | length // 0' semgrep-results.sarif)
+                echo "Found $rules_count pattern matches"
+                if [ "$rules_count" -gt 0 ]; then
+                  echo "\`\`\`"
+                  jq -r '.runs[0].results[] | "- [\(.level)] \(.message.text) in \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine)"' semgrep-results.sarif || echo "Error parsing Semgrep results"
+                  echo "\`\`\`"
+                fi
+              else
+                echo "Invalid JSON format in semgrep-results.sarif"
               fi
+            else
+              echo "No Semgrep results found or file is empty"
             fi
 
             echo
             echo "## Custom Security Checks"
-            if [ -f security-checks-results.txt ]; then
+            if [ -f security-checks-results.txt ] && [ -s security-checks-results.txt ]; then
               echo "\`\`\`"
               cat security-checks-results.txt
               echo "\`\`\`"
+            else
+              echo "No custom security check results found or file is empty"
             fi
 
-          } > security-report.md
+          } > security-report.md || {
+            echo "Error generating security report"
+            exit 1
+          }
 
       - name: Check Security Results
         id: check_results
@@ -233,37 +256,39 @@ jobs:
 
       - name: Upload Security Results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # 更新到 v4
         with:
           name: security-results
           path: |
-            bandit-results.json
-            bandit-results.sarif
+            bandit-results.*
             safety-results.json
             pip-audit-results.json
-            semgrep-results.sarif
+            semgrep-results.*
             secrets-results.json
             dodgy-results.txt
             security-checks-results.txt
             security-report.md
+          retention-days: 90
+          if-no-files-found: warn  # 添加文件不存在时的处理策略
 
       - name: Upload SARIF results
         if: always()
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3  # 更新到 v3
         with:
           sarif_file: semgrep-results.sarif
           category: semgrep
 
       - name: Store Security Results
         if: github.event_name == 'schedule'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # 更新到 v4
         with:
           name: security-trend-${{ github.sha }}
           path: |
-            bandit-results.json
+            bandit-results.*
             safety-results.json
-            semgrep-results.sarif
+            semgrep-results.*
           retention-days: 90
+          if-no-files-found: warn
 
       - name: Send Notifications
         if: always()
@@ -301,7 +326,7 @@ jobs:
 
   test:
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # 明确指定使用 ubuntu-24.04
 
     services:
       postgres:
@@ -329,12 +354,12 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@v4  # 更新到 v4
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435 # v4.5.0
+        uses: actions/setup-python@v5  # 更新到 v5
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -370,20 +395,20 @@ jobs:
           ln -s /opt/allure-2.23.1/bin/allure /usr/local/bin/allure
           allure generate allure-results --clean -o allure-history
 
-      - name: Upload Security Results
+      - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # 更新到 v4
         with:
-          name: security-results
+          name: test-results
           path: |
-            bandit-results.json
-            safety-results.json
-            semgrep-results.json
-            sql-injection-results.txt
+            ./allure-results
+            ./allure-history
+          retention-days: 90
+          if-no-files-found: warn
 
       - name: Deploy report to Github Pages
         if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847
+        uses: peaceiris/actions-gh-pages@v3  # 确保使用最新版本
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
