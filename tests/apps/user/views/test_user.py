@@ -1,10 +1,11 @@
 import os
 
-import pytest
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+
+import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -161,17 +162,17 @@ class TestUserViews:
         assert response.data["message"] == "密码修改成功"
 
     def test_change_password_wrong_old_password(self, normal_user, api_client):
-        """测试旧密码错误"""
+        """测试使用错误的旧密码修改密码"""
         api_client.force_authenticate(user=normal_user)
         data = {
-            "old_password": "wrongpass123",
-            "new_password": "newtestpass123",
-            "confirm_password": "newtestpass123",
+            "old_password": "wrong_password",
+            "new_password": "new_password123",
+            "confirm_password": "new_password123",
         }
         response = api_client.put(reverse("user:password_change"), data)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["code"] == 400
-        assert response.data["message"] == "密码修改失败"
+        assert response.data["data"]["old_password"][0] == "旧密码不正确"
 
     def test_user_register(self, api_client, register_url):
         """测试用户注册"""

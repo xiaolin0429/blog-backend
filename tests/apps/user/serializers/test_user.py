@@ -1,5 +1,6 @@
-import pytest
 from django.contrib.auth import get_user_model
+
+import pytest
 
 from apps.user.serializers import (
     UserProfileSerializer,

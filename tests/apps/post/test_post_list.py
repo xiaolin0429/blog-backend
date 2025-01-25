@@ -1,6 +1,7 @@
-import pytest
 from django.urls import reverse
 from django.utils import timezone
+
+import pytest
 from rest_framework import status
 
 from apps.post.models import Category, Post, Tag

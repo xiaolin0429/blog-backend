@@ -1,7 +1,8 @@
-import pytest
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+
+import pytest
 from rest_framework.exceptions import ValidationError
 
 from apps.user.serializers.user import (

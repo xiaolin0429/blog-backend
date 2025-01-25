@@ -1,8 +1,15 @@
+# Standard Library
+import logging
+
+# Django
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from rest_framework import generics, permissions
 
+# Third Party
+from rest_framework import generics, permissions, serializers
+
+# Local
 from apps.core.response import error_response, success_response
 
 from ..serializers.auth import PasswordChangeSerializer
@@ -110,8 +117,12 @@ class PasswordChangeView(generics.GenericAPIView):
             user.save()
 
             return success_response(message="密码修改成功")
+        except serializers.ValidationError as e:
+            # 序列化器验证错误，返回具体的验证错误信息
+            return error_response(code=400, message="密码修改失败", data=e.detail)
         except Exception as e:
-            error_data = None
-            if hasattr(e, "detail"):
-                error_data = {"errors": e.detail}
-            return error_response(code=400, message=str(e), data=error_data)
+            # 其他错误（如密码验证错误），返回通用错误消息
+            # 记录详细错误信息到日志，但不返回给用户
+            logger = logging.getLogger(__name__)
+            logger.error(f"Password change error: {str(e)}", exc_info=True)
+            return error_response(code=400, message="密码修改失败，请检查输入是否符合要求")

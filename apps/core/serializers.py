@@ -1,5 +1,6 @@
-import pytz
 from django.utils import timezone
+
+import pytz
 from rest_framework import serializers
 
 

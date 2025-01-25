@@ -1,7 +1,8 @@
-import allure
-import pytest
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+
+import allure
+import pytest
 from rest_framework.exceptions import ValidationError
 
 from apps.user.serializers import (

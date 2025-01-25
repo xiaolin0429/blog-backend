@@ -11,6 +11,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
 from django.urls import get_resolver
+
 from drf_yasg import openapi
 from drf_yasg.generators import OpenAPISchemaGenerator
 from drf_yasg.views import get_schema_view

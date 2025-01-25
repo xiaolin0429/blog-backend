@@ -1,7 +1,8 @@
-import pytz
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+
+import pytz
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import generics, permissions

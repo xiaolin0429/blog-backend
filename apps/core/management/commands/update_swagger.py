@@ -4,6 +4,7 @@ from pathlib import Path
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.urls import URLPattern, URLResolver, get_resolver
+
 from drf_yasg import openapi
 from drf_yasg.generators import OpenAPISchemaGenerator
 from rest_framework.request import Request

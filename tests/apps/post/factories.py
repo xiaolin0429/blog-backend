@@ -1,6 +1,7 @@
-import factory
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+
+import factory
 from faker import Faker
 
 from apps.post.models import Comment, Post

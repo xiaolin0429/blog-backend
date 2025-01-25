@@ -1,6 +1,7 @@
+from django.utils import timezone
+
 import pytest
 import pytz
-from django.utils import timezone
 from rest_framework import serializers
 
 from apps.core.serializers import TimezoneAwareJSONSerializer, TimezoneSerializerMixin

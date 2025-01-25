@@ -1,10 +1,11 @@
 from unittest.mock import patch
 
-import pytest
-import pytz
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
+
+import pytest
+import pytz
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APIClient
@@ -249,39 +250,39 @@ class TestAuthViews:
     def test_change_password_wrong_old_password(
         self, authenticated_client, change_password_url
     ):
-        """测试修改密码失败 - 旧密码错误"""
+        """测试使用错误的旧密码修改密码"""
         data = {
-            "old_password": "wrongpass",
-            "new_password": "NewTestPass456",
-            "confirm_password": "NewTestPass456",
+            "old_password": "wrong_password",
+            "new_password": "new_password123",
+            "confirm_password": "new_password123",
         }
         response = authenticated_client.put(change_password_url, data)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["code"] == 400
-        assert response.data["message"] == "密码修改失败"
+        assert str(response.data["data"]["old_password"][0]) == "旧密码不正确"
 
     def test_change_password_mismatch(self, authenticated_client, change_password_url):
-        """测试修改密码失败 - 新密码不匹配"""
+        """测试新密码与确认密码不匹配"""
         data = {
             "old_password": "testpass123",
-            "new_password": "NewTestPass456",
-            "confirm_password": "DifferentPass789",
+            "new_password": "new_password123",
+            "confirm_password": "different_password",
         }
         response = authenticated_client.put(change_password_url, data)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["code"] == 400
-        assert response.data["message"] == "密码修改失败"
+        assert str(response.data["data"]["new_password"][0]) == "两次密码不一致"
 
     def test_change_password_invalid_format(
         self, authenticated_client, change_password_url
     ):
-        """测试修改密码失败 - 密码格式无效"""
+        """测试新密码格式无效"""
         data = {
             "old_password": "testpass123",
-            "new_password": "12345",  # 太短且没有字母
-            "confirm_password": "12345",
+            "new_password": "12345678",
+            "confirm_password": "12345678",
         }
         response = authenticated_client.put(change_password_url, data)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["code"] == 400
-        assert response.data["message"] == "密码修改失败"
+        assert str(response.data["data"]["new_password"][0]) == "密码必须包含字母"

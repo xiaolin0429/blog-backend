@@ -1,6 +1,7 @@
-import pytest
 from django.test import TestCase
 from django.utils import timezone
+
+import pytest
 from rest_framework import status
 
 from apps.core.response import (
