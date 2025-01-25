@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import generics, permissions
 
 from apps.core.response import error_response, success_response
@@ -98,12 +99,19 @@ class PasswordChangeView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
+            new_password = serializer.validated_data["new_password"]
+
+            # 验证新密码
+            validate_password(new_password, request.user)
+
+            # 设置新密码
             user = request.user
-            user.set_password(serializer.validated_data["new_password"])
+            user.set_password(new_password)
             user.save()
+
             return success_response(message="密码修改成功")
         except Exception as e:
             error_data = None
             if hasattr(e, "detail"):
                 error_data = {"errors": e.detail}
-            return error_response(code=400, message="密码修改失败", data=error_data)
+            return error_response(code=400, message=str(e), data=error_data)
