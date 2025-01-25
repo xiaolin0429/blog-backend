@@ -4,4 +4,4 @@
 # Production Tools
 gunicorn==22.0.0
 supervisor==4.2.5
-sentry-sdk==2.8.0 
+sentry-sdk==2.8.0

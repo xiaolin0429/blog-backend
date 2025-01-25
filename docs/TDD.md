@@ -98,13 +98,13 @@ class TestCacheService:
         cache = CacheBackend()
         with pytest.raises(NotImplementedError):
             cache.get("test_key")
-    
+
     def test_local_cache(self):
         """测试本地缓存实现"""
         cache = LocalCache()
         cache.set("test_key", "test_value")
         assert cache.get("test_key") == "test_value"
-    
+
     def test_cache_service(self):
         """测试缓存服务"""
         service = CacheService()
@@ -117,11 +117,11 @@ class TestPostViews:
     def test_post_cache(self, client, post_factory):
         """测试文章缓存集成"""
         post = post_factory()
-        
+
         # 首次请求，应该从数据库获取
         response1 = client.get(f"/api/posts/{post.id}/")
         assert response1.status_code == 200
-        
+
         # 再次请求，应该从缓存获取
         response2 = client.get(f"/api/posts/{post.id}/")
         assert response2.status_code == 200
@@ -133,11 +133,11 @@ class TestCachePerformance:
     def test_cache_performance(self, benchmark):
         """测试缓存性能"""
         service = CacheService()
-        
+
         def cache_operation():
             service.set_post(1, {"title": "test"})
             return service.get_post(1)
-        
+
         result = benchmark(cache_operation)
         assert result == {"title": "test"}
 ```
@@ -148,7 +148,7 @@ class TestCachePerformance:
 class PostFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Post
-    
+
     title = factory.Sequence(lambda n: f'测试文章{n}')
     content = factory.Faker('text')
     author = factory.SubFactory(UserFactory)
@@ -174,19 +174,19 @@ def post_with_cache(post_factory, cache_service):
 # 1. 缓存后端接口
 class CacheBackend(Protocol):
     """缓存后端协议"""
-    
+
     def get(self, key: str) -> Any:
         """获取缓存值"""
         ...
-    
+
     def set(self, key: str, value: Any, timeout: Optional[int] = None) -> bool:
         """设置缓存值"""
         ...
-    
+
     def delete(self, key: str) -> bool:
         """删除缓存"""
         ...
-    
+
     def clear(self) -> bool:
         """清空缓存"""
         ...
@@ -194,37 +194,37 @@ class CacheBackend(Protocol):
 # 2. 本地缓存实现
 class LocalCache(CacheBackend):
     """Django本地缓存实现"""
-    
+
     def __init__(self):
         self.cache = caches['default']
-    
+
     def get(self, key: str) -> Any:
         return self.cache.get(key)
-    
+
     def set(self, key: str, value: Any, timeout: Optional[int] = None) -> bool:
         return self.cache.set(key, value, timeout)
-    
+
     def delete(self, key: str) -> bool:
         return self.cache.delete(key)
-    
+
     def clear(self) -> bool:
         return self.cache.clear()
 
 # 3. 缓存服务接口
 class CacheService:
     """缓存服务"""
-    
+
     def __init__(self, backend: Optional[CacheBackend] = None):
         self.backend = backend or LocalCache()
-    
+
     def get_post(self, post_id: int) -> Optional[dict]:
         """获取文章缓存"""
         return self.backend.get(f'post:{post_id}')
-    
+
     def set_post(self, post_id: int, data: dict, timeout: Optional[int] = None) -> bool:
         """设置文章缓存"""
         return self.backend.set(f'post:{post_id}', data, timeout)
-    
+
     def clear_post(self, post_id: int) -> bool:
         """清除文章缓存"""
         return self.backend.delete(f'post:{post_id}')
@@ -235,11 +235,11 @@ class CacheService:
 # 1. 分布式锁接口
 class DistributedLock(Protocol):
     """分布式锁协议"""
-    
+
     def acquire(self, key: str, timeout: Optional[int] = None) -> bool:
         """获取锁"""
         ...
-    
+
     def release(self, key: str) -> bool:
         """释放锁"""
         ...
@@ -247,11 +247,11 @@ class DistributedLock(Protocol):
 # 2. 消息队列接口
 class MessageQueue(Protocol):
     """消息队列协议"""
-    
+
     def publish(self, channel: str, message: Any) -> bool:
         """发布消息"""
         ...
-    
+
     def subscribe(self, channel: str) -> AsyncIterator[Any]:
         """订阅消息"""
         ...
@@ -259,15 +259,15 @@ class MessageQueue(Protocol):
 # 3. 会话管理接口
 class SessionManager(Protocol):
     """会话管理协议"""
-    
+
     def get_session(self, session_id: str) -> Optional[dict]:
         """获取会话"""
         ...
-    
+
     def set_session(self, session_id: str, data: dict, timeout: Optional[int] = None) -> bool:
         """设置会话"""
         ...
-    
+
     def delete_session(self, session_id: str) -> bool:
         """删除会话"""
         ...
@@ -285,10 +285,10 @@ class SessionManager(Protocol):
 ```python
 class CacheWarmer:
     """缓存预热服务"""
-    
+
     def __init__(self, cache_service: CacheService):
         self.cache_service = cache_service
-    
+
     async def warm_posts(self):
         """预热文章缓存"""
         posts = await Post.objects.filter(status='published').all()
@@ -301,14 +301,14 @@ class CacheWarmer:
 ```python
 class CacheInvalidator:
     """缓存失效服务"""
-    
+
     def __init__(self, cache_service: CacheService):
         self.cache_service = cache_service
-    
+
     def invalidate_post(self, post_id: int):
         """失效文章缓存"""
         self.cache_service.clear_post(post_id)
-    
+
     def invalidate_related(self, post_id: int):
         """失效相关缓存"""
         self.cache_service.clear_post(post_id)
@@ -346,7 +346,7 @@ class CacheInvalidator:
 ```python
 class MonitoringService:
     """监控服务"""
-    
+
     def track_cache_metrics(self, operation: str, success: bool, duration: float):
         """跟踪缓存指标"""
         tags = {
@@ -354,7 +354,7 @@ class MonitoringService:
             'success': success
         }
         self.record_metric('cache_operation', duration, tags)
-    
+
     def track_api_metrics(self, endpoint: str, method: str, status: int, duration: float):
         """跟踪API指标"""
         tags = {

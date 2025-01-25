@@ -1,1 +1,1 @@
-allure-pytest==2.13.2 
+allure-pytest==2.13.2

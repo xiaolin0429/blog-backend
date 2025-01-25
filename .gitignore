@@ -93,4 +93,4 @@ Thumbs.db
 *.tmp
 *.swp
 .env.local
-node_modules/ 
+node_modules/

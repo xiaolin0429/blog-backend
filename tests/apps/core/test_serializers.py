@@ -1,8 +1,10 @@
 import pytest
-from django.utils import timezone
 import pytz
+from django.utils import timezone
 from rest_framework import serializers
+
 from apps.core.serializers import TimezoneAwareJSONSerializer, TimezoneSerializerMixin
+
 
 @pytest.mark.unit
 class TestTimezoneAwareJSONSerializer:
@@ -34,6 +36,7 @@ class TestTimezoneAwareJSONSerializer:
         result = serializer.to_representation(aware_dt)
         assert result == "2024-01-01T07:00:00-05:00"  # UTC-5
 
+
 @pytest.mark.unit
 class TestTimezoneSerializerMixin:
     class TestSerializer(TimezoneSerializerMixin, serializers.Serializer):
@@ -46,7 +49,7 @@ class TestTimezoneSerializerMixin:
         data = {
             "created_at": timezone.datetime(2024, 1, 1, 12, 0, tzinfo=pytz.UTC),
             "updated_at": timezone.datetime(2024, 1, 1, 13, 0, tzinfo=pytz.UTC),
-            "name": "test"
+            "name": "test",
         }
         serializer = self.TestSerializer(data)
         result = serializer.to_representation(data)
@@ -62,7 +65,7 @@ class TestTimezoneSerializerMixin:
         data = {
             "created_at": timezone.datetime(2024, 1, 1, 12, 0, tzinfo=pytz.UTC),
             "updated_at": timezone.datetime(2024, 1, 1, 13, 0, tzinfo=pytz.UTC),
-            "name": "test"
+            "name": "test",
         }
         serializer = self.TestSerializer(data)
         serializer.context["request"] = request
@@ -79,7 +82,7 @@ class TestTimezoneSerializerMixin:
         data = {
             "created_at": timezone.datetime(2024, 1, 1, 12, 0, tzinfo=pytz.UTC),
             "updated_at": timezone.datetime(2024, 1, 1, 13, 0, tzinfo=pytz.UTC),
-            "name": "test"
+            "name": "test",
         }
         serializer = self.TestSerializer(data)
         serializer.context["request"] = request
@@ -96,7 +99,7 @@ class TestTimezoneSerializerMixin:
         data = {
             "created_at": timezone.datetime(2024, 1, 1, 12, 0),
             "updated_at": timezone.datetime(2024, 1, 1, 13, 0),
-            "name": "test"
+            "name": "test",
         }
         serializer = self.TestSerializer(data)
         serializer.context["request"] = request
@@ -104,4 +107,4 @@ class TestTimezoneSerializerMixin:
         # 验证时区信息被正确添加
         assert "+08:00" in result["created_at"]
         assert "+08:00" in result["updated_at"]
-        assert result["name"] == "test" 
+        assert result["name"] == "test"

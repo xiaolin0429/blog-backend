@@ -1,32 +1,35 @@
-from django_filters import rest_framework as filters
+import logging
+from datetime import datetime
+
 from django.db.models import Q
 from django.utils import timezone
-from datetime import datetime
-import logging
+from django_filters import rest_framework as filters
+
 from .models import Comment
 
 logger = logging.getLogger(__name__)
 
+
 class CommentFilter(filters.FilterSet):
     """评论过滤器"""
-    keyword = filters.CharFilter(method='filter_keyword')
-    start_date = filters.DateFilter(field_name='created_at', method='filter_start_date')
-    end_date = filters.DateFilter(field_name='created_at', method='filter_end_date')
-    
+
+    keyword = filters.CharFilter(method="filter_keyword")
+    start_date = filters.DateFilter(field_name="created_at", method="filter_start_date")
+    end_date = filters.DateFilter(field_name="created_at", method="filter_end_date")
+
     class Meta:
         model = Comment
         fields = {
-            'post': ['exact'],
-            'author': ['exact'],
-            'parent': ['exact', 'isnull'],
+            "post": ["exact"],
+            "author": ["exact"],
+            "parent": ["exact", "isnull"],
         }
-    
+
     def filter_keyword(self, queryset, name, value):
         """关键词搜索，支持评论内容和作者用户名"""
         if value:
             return queryset.filter(
-                Q(content__icontains=value) |
-                Q(author__username__icontains=value)
+                Q(content__icontains=value) | Q(author__username__icontains=value)
             )
         return queryset
 
@@ -40,7 +43,9 @@ class CommentFilter(filters.FilterSet):
                 )
                 logger.debug(f"Filtering comments after {start_datetime}")
                 queryset = queryset.filter(created_at__gte=start_datetime)
-                logger.debug(f"Found {queryset.count()} comments after {start_datetime}")
+                logger.debug(
+                    f"Found {queryset.count()} comments after {start_datetime}"
+                )
                 return queryset
             except Exception as e:
                 logger.error(f"Error filtering start date: {e}")
@@ -60,4 +65,4 @@ class CommentFilter(filters.FilterSet):
                 return queryset
             except Exception as e:
                 logger.error(f"Error filtering end date: {e}")
-        return queryset 
+        return queryset

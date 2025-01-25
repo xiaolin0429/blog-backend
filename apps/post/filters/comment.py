@@ -1,29 +1,35 @@
+from datetime import datetime, time
+
 import django_filters
 from django.db.models import Q
 from django.utils import timezone
-from datetime import datetime, time
 
 from ..models import Comment
 
+
 class CommentFilter(django_filters.FilterSet):
     """评论过滤器"""
-    keyword = django_filters.CharFilter(method='filter_keyword')
-    start_date = django_filters.DateFilter(field_name='created_at', lookup_expr='gte', method='filter_start_date')
-    end_date = django_filters.DateFilter(field_name='created_at', lookup_expr='lte', method='filter_end_date')
-    post = django_filters.NumberFilter(field_name='post')
-    author = django_filters.NumberFilter(field_name='author')
+
+    keyword = django_filters.CharFilter(method="filter_keyword")
+    start_date = django_filters.DateFilter(
+        field_name="created_at", lookup_expr="gte", method="filter_start_date"
+    )
+    end_date = django_filters.DateFilter(
+        field_name="created_at", lookup_expr="lte", method="filter_end_date"
+    )
+    post = django_filters.NumberFilter(field_name="post")
+    author = django_filters.NumberFilter(field_name="author")
 
     class Meta:
         model = Comment
-        fields = ['keyword', 'start_date', 'end_date', 'post', 'author']
+        fields = ["keyword", "start_date", "end_date", "post", "author"]
 
     def filter_keyword(self, queryset, name, value):
         """关键词过滤"""
         if not value:
             return queryset
         return queryset.filter(
-            Q(content__icontains=value) |
-            Q(author__username__icontains=value)
+            Q(content__icontains=value) | Q(author__username__icontains=value)
         )
 
     def filter_start_date(self, queryset, name, value):
@@ -45,4 +51,4 @@ class CommentFilter(django_filters.FilterSet):
         # 将日期转换为日期时间,设置时间为当天的结束(23:59:59.999999)
         end_datetime = datetime.combine(value, time.max)
         end_datetime = timezone.make_aware(end_datetime)
-        return queryset.filter(created_at__lte=end_datetime) 
+        return queryset.filter(created_at__lte=end_datetime)

@@ -133,4 +133,4 @@ pytest --cov=apps --cov-report=html
 
 ## 许可证
 
-[MIT License](LICENSE) 
+[MIT License](LICENSE)
