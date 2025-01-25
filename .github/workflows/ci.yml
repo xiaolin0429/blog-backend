@@ -424,7 +424,7 @@ jobs:
 
       - name: Deploy report to Github Pages
         if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        uses: peaceiris/actions-gh-pages@64b46b4226a4a12da2239ba3ea9f7196f998677f  # v3.9.3
+        uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
