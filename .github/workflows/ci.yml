@@ -28,12 +28,12 @@ jobs:
     runs-on: ubuntu-24.04  # 明确指定使用 ubuntu-24.04
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4  # 更新到 v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5  # 更新到 v5
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -272,7 +272,7 @@ jobs:
 
       - name: Upload Security Results
         if: always()
-        uses: actions/upload-artifact@v4  # 更新到 v4
+        uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392  # v4.0.0
         with:
           name: security-results
           path: |
@@ -285,18 +285,18 @@ jobs:
             security-checks-results.txt
             security-report.md
           retention-days: 90
-          if-no-files-found: warn  # 添加文件不存在时的处理策略
+          if-no-files-found: warn
 
       - name: Upload SARIF results
         if: always()
-        uses: github/codeql-action/upload-sarif@v3  # 更新到 v3
+        uses: github/codeql-action/upload-sarif@407ffafae6a767df3e0230c3df91b6443ae8df75  # v3.22.11
         with:
           sarif_file: semgrep-results.sarif
           category: semgrep
 
       - name: Store Security Results
         if: github.event_name == 'schedule'
-        uses: actions/upload-artifact@v4  # 更新到 v4
+        uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392  # v4.0.0
         with:
           name: security-trend-${{ github.sha }}
           path: |
@@ -370,12 +370,12 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4  # 更新到 v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5  # 更新到 v5
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -413,7 +413,7 @@ jobs:
 
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v4  # 更新到 v4
+        uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392  # v4.0.0
         with:
           name: test-results
           path: |
@@ -424,7 +424,7 @@ jobs:
 
       - name: Deploy report to Github Pages
         if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        uses: peaceiris/actions-gh-pages@v3.9.3  # 使用固定版本
+        uses: peaceiris/actions-gh-pages@64b46b4226a4a12da2239ba3ea9f7196f998677f  # v3.9.3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
