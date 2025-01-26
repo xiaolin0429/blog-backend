@@ -4,7 +4,7 @@ from django.utils import timezone
 import factory
 from faker import Faker
 
-from apps.post.models import Comment, Post
+from apps.post.models import Comment, Post, Category, Tag
 
 fake = Faker(["zh_CN"])
 
@@ -21,6 +21,30 @@ class UserFactory(factory.django.DjangoModelFactory):
     password = factory.PostGenerationMethodCall("set_password", "password123")
 
 
+class CategoryFactory(factory.django.DjangoModelFactory):
+    """分类工厂类"""
+
+    class Meta:
+        model = Category
+        django_get_or_create = ("name",)
+
+    name = factory.Sequence(lambda n: f"分类{n}")
+    description = factory.LazyFunction(lambda: fake.text(max_nb_chars=200))
+    parent = None
+    order = factory.Sequence(lambda n: n)
+
+
+class TagFactory(factory.django.DjangoModelFactory):
+    """标签工厂类"""
+
+    class Meta:
+        model = Tag
+        django_get_or_create = ("name",)
+
+    name = factory.Sequence(lambda n: f"标签{n}")
+    description = factory.LazyFunction(lambda: fake.text(max_nb_chars=200))
+
+
 class PostFactory(factory.django.DjangoModelFactory):
     """文章工厂类"""
 
@@ -29,9 +53,23 @@ class PostFactory(factory.django.DjangoModelFactory):
 
     title = factory.LazyFunction(lambda: fake.sentence())
     content = factory.LazyFunction(lambda: fake.text())
+    excerpt = factory.LazyFunction(lambda: fake.text(max_nb_chars=200))
     author = factory.SubFactory(UserFactory)
+    category = factory.SubFactory(CategoryFactory)
     status = "published"
     published_at = factory.LazyFunction(timezone.now)
+
+    @factory.post_generation
+    def tags(self, create, extracted, **kwargs):
+        if not create:
+            return
+
+        if extracted:
+            for tag in extracted:
+                self.tags.add(tag)
+        else:
+            # 默认创建2个标签
+            self.tags.add(TagFactory(), TagFactory())
 
 
 class CommentFactory(factory.django.DjangoModelFactory):

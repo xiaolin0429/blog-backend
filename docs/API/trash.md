@@ -6,48 +6,76 @@
 - **接口路径**: `/api/v1/trash/posts`
 - **请求头**:
   - Authorization: Bearer {token}（必填）
-- **请求参数**:
-  - page: 页码（可选，默认1）
-  - size: 每页数量（可选，默认10，最大50）
-  - ordering: 排序字段（可选，支持deleted_at, -deleted_at）
-  - search: 搜索关键词（可选，搜索title, content, excerpt）
 
-- **响应数据**:
+- **请求参数**:
+
+| 参数名 | 类型 | 是否必须 | 说明 | 示例 |
+|--------|------|----------|------|------|
+| page | number | 否 | 页码,默认1 | 1 |
+| size | number | 否 | 每页数量,默认10,最大50 | 10 |
+| ordering | string | 否 | 排序字段,支持deleted_at, -deleted_at | -deleted_at |
+| search | string | 否 | 搜索关键词,搜索title, content, excerpt | 测试 |
+
+- **响应参数**:
+
+| 参数名 | 类型 | 是否必返回 | 说明 |
+|--------|------|------------|------|
+| code | number | 是 | 状态码 |
+| message | string | 是 | 状态信息 |
+| data.total | number | 是 | 总数 |
+| data.page | number | 是 | 当前页码 |
+| data.size | number | 是 | 每页数量 |
+| data.pages | number | 是 | 总页数 |
+| data.items[].id | number | 是 | 文章ID |
+| data.items[].title | string | 是 | 文章标题 |
+| data.items[].excerpt | string | 否 | 文章摘要 |
+| data.items[].author.id | number | 是 | 作者ID |
+| data.items[].author.username | string | 是 | 用户名 |
+| data.items[].author.nickname | string | 否 | 昵称 |
+| data.items[].category.id | number | 是 | 分类ID |
+| data.items[].category.name | string | 是 | 分类名称 |
+| data.items[].tags[].id | number | 是 | 标签ID |
+| data.items[].tags[].name | string | 是 | 标签名称 |
+| data.items[].deleted_at | string | 是 | 删除时间 |
+| timestamp | string | 是 | 时间戳 |
+| requestId | string | 是 | 请求ID |
+
+- **响应示例**:
 ```json
 {
     "code": 200,
     "message": "success",
     "data": {
-        "total": number,      // 总数（必返回）
-        "page": number,       // 当前页码（必返回）
-        "size": number,       // 每页数量（必返回）
-        "pages": number,      // 总页数（必返回）
-        "items": [           // 文章列表（必返回）
+        "total": 100,
+        "page": 1,
+        "size": 10,
+        "pages": 10,
+        "items": [
             {
-                "id": number,           // 文章ID（必返回）
-                "title": "string",      // 文章标题（必返回）
-                "excerpt": "string",    // 文章摘要（可能为null）
-                "author": {            // 作者信息（必返回）
-                    "id": number,       // 作者ID（必返回）
-                    "username": "string", // 用户名（必返回）
-                    "nickname": "string"  // 昵称（可能为null）
+                "id": 1,
+                "title": "测试文章",
+                "excerpt": "这是一篇测试文章",
+                "author": {
+                    "id": 1,
+                    "username": "test",
+                    "nickname": "测试用户"
                 },
-                "category": {          // 分类信息（必返回）
-                    "id": number,       // 分类ID（必返回）
-                    "name": "string"    // 分类名称（必返回）
+                "category": {
+                    "id": 1,
+                    "name": "测试分类"
                 },
-                "tags": [             // 标签列表（必返回）
+                "tags": [
                     {
-                        "id": number,   // 标签ID（必返回）
-                        "name": "string" // 标签名称（必返回）
+                        "id": 1,
+                        "name": "测试标签"
                     }
                 ],
-                "deleted_at": "string" // 删除时间（必返回）
+                "deleted_at": "2024-03-20T12:00:00Z"
             }
         ]
     },
-    "timestamp": "string", // 时间戳（必返回）
-    "requestId": "string"  // 请求ID（必返回）
+    "timestamp": "2024-03-20T12:00:00Z",
+    "requestId": "7cb116acbcd23"
 }
 ```
 - **错误码**:
@@ -59,18 +87,31 @@
 - **接口路径**: `/api/v1/trash/posts/{id}/restore`
 - **请求头**:
   - Authorization: Bearer {token}（必填）
-- **响应数据**:
+
+- **响应参数**:
+
+| 参数名 | 类型 | 是否必返回 | 说明 |
+|--------|------|------------|------|
+| code | number | 是 | 状态码 |
+| message | string | 是 | 状态信息 |
+| data.id | number | 是 | 文章ID |
+| data.title | string | 是 | 文章标题 |
+| data.status | string | 是 | 文章状态 |
+| timestamp | string | 是 | 时间戳 |
+| requestId | string | 是 | 请求ID |
+
+- **响应示例**:
 ```json
 {
     "code": 200,
     "message": "success",
     "data": {
-        "id": number,         // 文章ID（必返回）
-        "title": "string",    // 文章标题（必返回）
-        "status": "draft"     // 文章状态（必返回）
+        "id": 1,
+        "title": "测试文章",
+        "status": "draft"
     },
-    "timestamp": "string", // 时间戳（必返回）
-    "requestId": "string"  // 请求ID（必返回）
+    "timestamp": "2024-03-20T12:00:00Z",
+    "requestId": "7cb116acbcd23"
 }
 ```
 - **错误码**:
@@ -83,14 +124,25 @@
 - **接口路径**: `/api/v1/trash/posts/{id}`
 - **请求头**:
   - Authorization: Bearer {token}（必填）
-- **响应数据**:
+
+- **响应参数**:
+
+| 参数名 | 类型 | 是否必返回 | 说明 |
+|--------|------|------------|------|
+| code | number | 是 | 状态码 |
+| message | string | 是 | 状态信息 |
+| data | null | 是 | 响应数据 |
+| timestamp | string | 是 | 时间戳 |
+| requestId | string | 是 | 请求ID |
+
+- **响应示例**:
 ```json
 {
     "code": 204,
     "message": "success",
     "data": null,
-    "timestamp": "string", // 时间戳（必返回）
-    "requestId": "string"  // 请求ID（必返回）
+    "timestamp": "2024-03-20T12:00:00Z",
+    "requestId": "7cb116acbcd23"
 }
 ```
 - **错误码**:
@@ -103,16 +155,27 @@
 - **接口路径**: `/api/v1/trash/posts/empty`
 - **请求头**:
   - Authorization: Bearer {token}（必填）
-- **响应数据**:
+
+- **响应参数**:
+
+| 参数名 | 类型 | 是否必返回 | 说明 |
+|--------|------|------------|------|
+| code | number | 是 | 状态码 |
+| message | string | 是 | 状态信息 |
+| data.deleted_count | number | 是 | 删除的文章数量 |
+| timestamp | string | 是 | 时间戳 |
+| requestId | string | 是 | 请求ID |
+
+- **响应示例**:
 ```json
 {
     "code": 204,
     "message": "success",
     "data": {
-        "deleted_count": number  // 删除的文章数量
+        "deleted_count": 10
     },
-    "timestamp": "string", // 时间戳（必返回）
-    "requestId": "string"  // 请求ID（必返回）
+    "timestamp": "2024-03-20T12:00:00Z",
+    "requestId": "7cb116acbcd23"
 }
 ```
 - **错误码**:

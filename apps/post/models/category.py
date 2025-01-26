@@ -29,6 +29,20 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def level(self):
+        """获取分类层级
+
+        Returns:
+            int: 分类层级，从0开始（0表示顶级分类）
+        """
+        level = 0
+        parent = self.parent
+        while parent:
+            level += 1
+            parent = parent.parent
+        return level
+
     def can_delete(self):
         """检查分类是否可以删除
 

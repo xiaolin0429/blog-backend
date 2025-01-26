@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import generics, views
+from rest_framework import generics, views, pagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import ScopedRateThrottle
 
@@ -21,6 +21,13 @@ from ..serializers import (
     PostDetailSerializer,
     PostListSerializer,
 )
+
+
+class PostPagination(pagination.PageNumberPagination):
+    """文章分页类"""
+    page_size = 10
+    page_size_query_param = "size"
+    max_page_size = 50
 
 
 class PostListView(generics.ListCreateAPIView):
@@ -337,6 +344,7 @@ class PostTrashListView(generics.ListAPIView):
     search_fields = ["title", "content", "excerpt"]
     ordering_fields = ["deleted_at"]
     ordering = ["-deleted_at"]
+    pagination_class = PostPagination
 
     def get_queryset(self):
         if self.request.user.is_staff:
@@ -348,9 +356,13 @@ class PostTrashListView(generics.ListAPIView):
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
-            return success_response(data=serializer.data)
+            return success_response(
+                data=self.paginator.get_paginated_response(serializer.data).data
+            )
         serializer = self.get_serializer(queryset, many=True)
-        return success_response(data=serializer.data)
+        return success_response(
+            data={"results": serializer.data, "count": queryset.count()}
+        )
 
 
 class PostRestoreView(views.APIView):
@@ -360,13 +372,19 @@ class PostRestoreView(views.APIView):
 
     def post(self, request, pk):
         try:
-            post = Post.objects.get(pk=pk, is_deleted=True, author=request.user)
-            post.is_deleted = False
-            post.status = "draft"
-            post.save()
-            return success_response(data={"status": "restored"})
+            post = Post.objects.get(pk=pk, is_deleted=True)
+            # 检查权限
+            if not request.user.is_staff and post.author != request.user:
+                return success_response(code=404, message="文章不存在或无权限操作")
+            
+            post.restore()
+            return success_response(data={
+                "id": post.id,
+                "title": post.title,
+                "status": post.status
+            })
         except Post.DoesNotExist:
-            return error_response(code=404, message="文章不存在或无权限")
+            return success_response(code=404, message="文章不存在或无权限操作")
 
 
 class PostPermanentDeleteView(views.APIView):
@@ -376,11 +394,15 @@ class PostPermanentDeleteView(views.APIView):
 
     def delete(self, request, pk):
         try:
-            post = Post.objects.get(pk=pk, is_deleted=True, author=request.user)
+            post = Post.objects.get(pk=pk, is_deleted=True)
+            # 检查权限
+            if not request.user.is_staff and post.author != request.user:
+                return success_response(code=404, message="文章不存在或无权限操作")
+            
             post.delete()
-            return success_response(message="文章已永久删除")
+            return success_response(code=204, message="success", data=None)
         except Post.DoesNotExist:
-            return error_response(code=404, message="文章不存在或无权限")
+            return success_response(code=404, message="文章不存在或无权限操作")
 
 
 class PostEmptyTrashView(views.APIView):
@@ -390,16 +412,21 @@ class PostEmptyTrashView(views.APIView):
 
     def delete(self, request):
         try:
-            # 只删除当前用户的文章
-            deleted_count = Post.objects.filter(
-                is_deleted=True, author=request.user
-            ).count()
-            Post.objects.filter(is_deleted=True, author=request.user).delete()
+            # 只删除当前用户的文章，管理员可以删除所有文章
+            queryset = Post.objects.filter(is_deleted=True)
+            if not request.user.is_staff:
+                queryset = queryset.filter(author=request.user)
+            
+            deleted_count = queryset.count()
+            queryset.delete()
+            
             return success_response(
-                message="回收站已清空", data={"deleted_count": deleted_count}
+                code=204,
+                message="success",
+                data={"deleted_count": deleted_count}
             )
         except Exception as e:
-            return error_response(code=400, message="清空回收站失败", data={"error": str(e)})
+            return success_response(code=400, message="清空回收站失败")
 
 
 class PostAutoSaveThrottle(ScopedRateThrottle):

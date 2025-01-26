@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from datetime import timedelta
 
 import pytz
 from drf_yasg import openapi
@@ -45,6 +46,35 @@ class LoginView(TokenObtainPairView):
             serializer.is_valid(raise_exception=True)
             user = serializer.user
             tokens = serializer.validated_data
+
+            # 处理remember参数
+            remember = request.data.get('remember', False)
+            if remember:
+                # 如果remember为True，则将access token的有效期设置为30天，refresh token的有效期设置为60天
+                now = timezone.now()
+                refresh = RefreshToken.for_user(user)
+                refresh.set_exp(lifetime=timedelta(days=60))
+                refresh.set_iat(at_time=now)
+                access = refresh.access_token
+                access.set_exp(lifetime=timedelta(days=30))
+                access.set_iat(at_time=now)
+                tokens = {
+                    'access': str(access),
+                    'refresh': str(refresh)
+                }
+            else:
+                # 默认有效期：access token 24小时，refresh token 7天
+                now = timezone.now()
+                refresh = RefreshToken.for_user(user)
+                refresh.set_exp(lifetime=timedelta(days=7))
+                refresh.set_iat(at_time=now)
+                access = refresh.access_token
+                access.set_exp(lifetime=timedelta(hours=24))
+                access.set_iat(at_time=now)
+                tokens = {
+                    'access': str(access),
+                    'refresh': str(refresh)
+                }
 
             # 更新最后登录时间
             user.last_login = timezone.now()

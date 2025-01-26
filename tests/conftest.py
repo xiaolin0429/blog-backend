@@ -114,3 +114,11 @@ def other_user():
 def other_post(other_user):
     """创建另一个测试文章"""
     return PostFactory(author=other_user, status="published")
+
+
+@pytest.fixture
+def auth_client_non_staff(api_client, user_factory):
+    """返回一个普通用户的认证客户端"""
+    user = user_factory(is_staff=False)
+    api_client.force_authenticate(user=user)
+    return api_client

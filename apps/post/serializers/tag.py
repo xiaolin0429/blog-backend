@@ -1,8 +1,7 @@
 from rest_framework import serializers
 
 from apps.core.serializers import TimezoneSerializerMixin
-
-from ..models import Tag
+from ..models import Tag, Post
 
 
 class DuplicateTagError(Exception):
@@ -14,10 +13,27 @@ class DuplicateTagError(Exception):
 class TagSerializer(TimezoneSerializerMixin, serializers.ModelSerializer):
     """标签序列化器"""
 
+    post_count = serializers.SerializerMethodField()
+    posts = serializers.SerializerMethodField()
+
     class Meta:
         model = Tag
-        fields = ["id", "name", "description", "created_at"]
-        read_only_fields = ["created_at"]
+        fields = ["id", "name", "description", "post_count", "created_at", "posts"]
+        read_only_fields = ["created_at", "post_count", "posts"]
+
+    def get_post_count(self, obj):
+        """获取文章数量"""
+        return obj.post_set.count()
+
+    def get_posts(self, obj):
+        """获取最近的文章列表（仅在详情接口返回）"""
+        if self.context.get('detail'):
+            from ..serializers import PostBriefSerializer
+            return PostBriefSerializer(
+                obj.post_set.order_by('-created_at')[:10], 
+                many=True
+            ).data
+        return None
 
     def validate_name(self, value):
         """验证标签名称"""

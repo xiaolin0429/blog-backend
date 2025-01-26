@@ -3,6 +3,7 @@ from .comment import CommentSerializer
 from .post import (
     PostAutoSaveResponseSerializer,
     PostAutoSaveSerializer,
+    PostBriefSerializer,
     PostCreateUpdateSerializer,
     PostDetailSerializer,
     PostListSerializer,
@@ -18,4 +19,5 @@ __all__ = [
     "PostCreateUpdateSerializer",
     "PostAutoSaveSerializer",
     "PostAutoSaveResponseSerializer",
+    "PostBriefSerializer",
 ]
