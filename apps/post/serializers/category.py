@@ -10,6 +10,7 @@ class CategorySerializer(TimezoneSerializerMixin, serializers.ModelSerializer):
 
     children = serializers.SerializerMethodField()
     parent_name = serializers.CharField(source="parent.name", read_only=True)
+    level = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
@@ -20,6 +21,7 @@ class CategorySerializer(TimezoneSerializerMixin, serializers.ModelSerializer):
             "parent",
             "parent_name",
             "children",
+            "level",
             "order",
             "created_at",
             "updated_at",
@@ -28,5 +30,14 @@ class CategorySerializer(TimezoneSerializerMixin, serializers.ModelSerializer):
 
     def get_children(self, obj):
         """获取子分类"""
-        children = obj.children.all()
+        children = obj.children.all().order_by("order", "id")
         return CategorySerializer(children, many=True, context=self.context).data
+
+    def get_level(self, obj):
+        """获取分类层级"""
+        level = 0
+        parent = obj.parent
+        while parent:
+            level += 1
+            parent = parent.parent
+        return level

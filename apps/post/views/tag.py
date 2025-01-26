@@ -1,4 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Count, Max
 
 from rest_framework import filters, generics, serializers
 from rest_framework.exceptions import PermissionDenied
@@ -15,7 +16,7 @@ class TagPagination(PageNumberPagination):
     """标签分页类"""
 
     page_size = 10
-    page_size_query_param = "page_size"
+    page_size_query_param = "size"
     max_page_size = 100
 
     def get_paginated_response(self, data):
@@ -39,11 +40,19 @@ class TagListView(generics.ListCreateAPIView):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     search_fields = ["name"]
-    ordering_fields = ["name", "id"]
+    ordering_fields = ["name", "id", "post_count"]
     ordering = ["id"]
     pagination_class = TagPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        """重写get_queryset以支持post_count排序"""
+        queryset = super().get_queryset()
+        if self.request.query_params.get('ordering') in ['post_count', '-post_count']:
+            # 添加post_count注解用于排序
+            queryset = queryset.annotate(post_count=Count('post'))
+        return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -107,11 +116,18 @@ class TagDetailView(generics.RetrieveUpdateDestroyAPIView):
         except ObjectDoesNotExist:
             return None
 
+    def get_serializer_context(self):
+        """添加detail标记到context"""
+        context = super().get_serializer_context()
+        if 'request' in context and context['request'].method == 'GET':
+            context['detail'] = True
+        return context
+
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         if not instance:
             return success_response(code=404, message="标签不存在")
-        serializer = self.get_serializer(instance)
+        serializer = self.get_serializer(instance, context={'detail': True})
         return success_response(data=serializer.data)
 
     def update(self, request, *args, **kwargs):
@@ -140,6 +156,10 @@ class TagDetailView(generics.RetrieveUpdateDestroyAPIView):
         if not instance:
             return success_response(code=404, message="标签不存在")
 
+        # 检查标签下是否存在文章
+        if instance.post_set.exists():
+            return success_response(code=409, message="标签下存在文章，不能删除")
+
         self.perform_destroy(instance)
         return success_response(message="删除成功")
 
@@ -165,12 +185,67 @@ class TagBatchCreateView(generics.CreateAPIView):
             if existing_names:
                 return success_response(code=409, message="标签名称已存在")
 
-            serializer = self.get_serializer(data=request.data, many=True)
-            serializer.is_valid(raise_exception=True)
-            self.perform_create(serializer)
-            return success_response(data=serializer.data)
-        except serializers.ValidationError as e:
-            error_data = {"errors": e.detail}
-            return success_response(code=400, message="标签名称不符合要求", data=error_data)
+            # 验证所有数据
+            invalid_items = []
+            for item in request.data:
+                serializer = self.get_serializer(data=item)
+                if not serializer.is_valid():
+                    invalid_items.append(item)
+
+            if invalid_items:
+                return success_response(code=400, message="标签名称不能为空或长度不符合要求")
+
+            # 创建标签
+            created_tags = []
+            for item in request.data:
+                serializer = self.get_serializer(data=item)
+                serializer.is_valid(raise_exception=True)
+                tag = serializer.save()
+                created_tags.append(serializer.data)
+            
+            return success_response(data=created_tags)
         except Exception as e:
             return success_response(code=400, message=str(e))
+
+
+class TagStatsView(generics.GenericAPIView):
+    """标签统计视图"""
+    permission_classes = []
+
+    @staticmethod
+    def get(request):
+        """获取标签统计信息"""
+        total = Tag.objects.count()
+        total_used = Tag.objects.filter(post__isnull=False).distinct().count()
+
+        most_used = Tag.objects.annotate(
+            post_count=Count('post')
+        ).order_by('-post_count')[:10]
+
+        recently_created = Tag.objects.order_by('-created_at')[:10]
+
+        recently_used = Tag.objects.filter(
+            post__isnull=False
+        ).annotate(
+            last_used=Max('post__created_at')
+        ).order_by('-last_used')[:10]
+
+        return success_response(data={
+            'total': total,
+            'total_used': total_used,
+            'most_used': [{
+                'id': tag.id,
+                'name': tag.name,
+                'post_count': tag.post_count
+            } for tag in most_used],
+            'recently_created': [{
+                'id': tag.id,
+                'name': tag.name,
+                'created_at': tag.created_at
+            } for tag in recently_created],
+            'recently_used': [{
+                'id': tag.id,
+                'name': tag.name,
+                'last_used_at': tag.last_used
+            } for tag in recently_used]
+        })

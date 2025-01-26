@@ -1,3 +1,4 @@
+from typing import Any
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -14,6 +15,10 @@ class Tag(models.Model):
         verbose_name = _("标签")
         verbose_name_plural = _("标签")
         ordering = ["id"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.post_count = None
 
     def __str__(self):
         return self.name

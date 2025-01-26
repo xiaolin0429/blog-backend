@@ -13,7 +13,12 @@ from .post import (
     PostUpdateView,
     PostViewView,
 )
-from .tag import TagBatchCreateView, TagDetailView, TagListView
+from .tag import (
+    TagListView,
+    TagDetailView,
+    TagBatchCreateView,
+    TagStatsView,
+)
 
 __all__ = [
     "PostListView",
@@ -33,6 +38,7 @@ __all__ = [
     "TagListView",
     "TagDetailView",
     "TagBatchCreateView",
+    "TagStatsView",
     "GlobalCommentListView",
     "CommentListCreateView",
     "CommentDetailView",

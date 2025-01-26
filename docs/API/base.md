@@ -13,13 +13,22 @@
 
 ## 响应格式
 所有接口返回JSON格式数据，包含以下字段：
+
+| 字段名 | 类型 | 说明 |
+|-------|------|------|
+| code | number | 业务状态码，200表示成功，其他表示错误 |
+| message | string | 状态描述 |
+| data | any | 响应数据，可能是对象、数组或null |
+| timestamp | string | 响应时间（ISO格式） |
+| requestId | string | 请求ID，用于追踪 |
+
 ```json
 {
-    "code": 200,    // 业务状态码，200表示成功，其他表示错误
-    "message": "",  // 状态描述
-    "data": null,   // 响应数据，可能是对象、数组或null
-    "timestamp": "2024-01-19T10:30:00Z",  // 响应时间（ISO格式）
-    "requestId": "string"                 // 请求ID，用于追踪
+    "code": 200,
+    "message": "",
+    "data": null,
+    "timestamp": "2024-01-19T10:30:00Z",
+    "requestId": "string"
 }
 ```
 
@@ -32,28 +41,50 @@
 ```
 
 2. 业务错误:
+
+| 字段名 | 类型 | 说明 |
+|-------|------|------|
+| code | number | 业务状态码 |
+| message | string | 错误描述 |
+| data | any | 可能包含详细错误信息 |
+| timestamp | string | 时间戳 |
+| requestId | string | 请求ID |
+
 ```json
 {
-    "code": 400,           // 业务状态码
-    "message": "错误信息",  // 错误描述
-    "data": null,         // 可能包含详细错误信息
-    "timestamp": "",      // 时间戳
-    "requestId": ""       // 请求ID
+    "code": 400,
+    "message": "错误信息",
+    "data": null,
+    "timestamp": "",
+    "requestId": ""
 }
 ```
 
 ## 分页格式
 分页接口的响应数据格式如下：
+
+| 字段名 | 类型 | 说明 |
+|-------|------|------|
+| code | number | 业务状态码 |
+| message | string | 状态描述 |
+| data.total | number | 总记录数 |
+| data.page | number | 当前页码 |
+| data.size | number | 每页数量 |
+| data.pages | number | 总页数 |
+| data.items | array | 当前页数据列表 |
+| timestamp | string | 响应时间 |
+| requestId | string | 请求ID |
+
 ```json
 {
     "code": 200,
     "message": "success",
     "data": {
-        "total": 100,          // 总记录数
-        "page": 1,            // 当前页码
-        "size": 10,           // 每页数量
-        "pages": 10,          // 总页数
-        "items": []           // 当前页数据列表
+        "total": 100,
+        "page": 1,
+        "size": 10,
+        "pages": 10,
+        "items": []
     },
     "timestamp": "2024-01-19T10:30:00Z",
     "requestId": "string"
@@ -69,6 +100,16 @@
 - 未认证用户: 60次/分钟
 - 已认证用户: 300次/分钟
 - 超出限制返回429状态码
+
+| 字段名 | 类型 | 说明 |
+|-------|------|------|
+| code | number | 业务状态码 |
+| message | string | 错误描述 |
+| data.waitSeconds | number | 需要等待的秒数 |
+| data.retryAfter | string | 可重试时间 |
+| timestamp | string | 响应时间 |
+| requestId | string | 请求ID |
+
 ```json
 {
     "code": 429,

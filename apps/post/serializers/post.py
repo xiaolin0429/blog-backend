@@ -128,7 +128,7 @@ class PostAutoSaveSerializer(serializers.ModelSerializer):
             "title": validated_data.get("title", instance.title),
             "content": validated_data.get("content", instance.content),
             "excerpt": validated_data.get("excerpt", instance.excerpt),
-            "category": validated_data.get("category", instance.category_id),
+            "category": validated_data.get("category", instance.category).id if validated_data.get("category", instance.category) else None,
             "tags": list(instance.tags.values_list("id", flat=True)),
             "version": instance.version,
             "auto_save_time": timezone.now().isoformat(),
@@ -148,3 +148,22 @@ class PostAutoSaveResponseSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         return instance.auto_save_content
+
+
+class PostBriefSerializer(TimezoneSerializerMixin, serializers.ModelSerializer):
+    """文章简要信息序列化器"""
+
+    author_username = serializers.CharField(source="author.username", read_only=True)
+    category_name = serializers.CharField(source="category.name", read_only=True)
+
+    class Meta:
+        model = Post
+        fields = [
+            "id",
+            "title",
+            "excerpt",
+            "author_username",
+            "category_name",
+            "created_at",
+        ]
+        read_only_fields = fields
