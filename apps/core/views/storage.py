@@ -1,3 +1,5 @@
+import logging
+
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, views
@@ -70,13 +72,15 @@ class FileUploadView(views.APIView):
             return Response({"code": 200, "message": "success", "data": result})
 
         except ValueError as e:
+            logging.error("ValueError in FileUploadView: %s", str(e))
             return Response(
-                {"code": 415, "message": str(e)},
+                {"code": 415, "message": "不支持的文件类型"},
                 status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             )
         except RuntimeError as e:
+            logging.error("RuntimeError in FileUploadView: %s", str(e))
             return Response(
-                {"code": 500, "message": str(e)},
+                {"code": 500, "message": "服务器内部错误"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -104,8 +108,9 @@ class FileDeleteView(views.APIView):
                 {"code": 404, "message": "文件不存在"}, status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
+            logging.error("Error in FileDeleteView: %s", str(e))
             return Response(
-                {"code": 500, "message": str(e)},
+                {"code": 500, "message": "服务器内部错误"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -182,13 +187,16 @@ class FileListView(views.APIView):
 
             return Response({"code": 200, "message": "success", "data": result})
 
-        except ValueError:
+        except ValueError as e:
+            logging.error("ValueError in FileListView: %s", str(e))
             return Response(
-                {"code": 400, "message": "参数错误"}, status=status.HTTP_400_BAD_REQUEST
+                {"code": 400, "message": "请求参数错误"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception as e:
+            logging.error("Error in FileListView: %s", str(e))
             return Response(
-                {"code": 500, "message": str(e)},
+                {"code": 500, "message": "服务器内部错误"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -261,11 +269,14 @@ class FileRenameView(views.APIView):
                 raise
 
         except ValueError as e:
+            logging.error("ValueError in FileRenameView: %s", str(e))
             return Response(
-                {"code": 400, "message": str(e)}, status=status.HTTP_400_BAD_REQUEST
+                {"code": 400, "message": "请求参数错误"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception as e:
+            logging.error("Error in FileRenameView: %s", str(e))
             return Response(
-                {"code": 500, "message": f"重命名文件失败: {str(e)}"},
+                {"code": 500, "message": "服务器内部错误"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
