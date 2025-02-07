@@ -278,3 +278,42 @@ class TestGlobalCommentAPI:
             assert len(results) == 2  # Only main comments
             assert results[0]["reply_count"] == 2  # main_comment1
             assert results[1]["reply_count"] == 1  # main_comment2
+
+    @allure.story("URL路由")
+    @allure.severity(allure.severity_level.CRITICAL)
+    @allure.description("测试评论相关的URL路由配置")
+    @pytest.mark.high
+    def test_comment_urls(self, client):
+        with allure.step("测试全局评论列表URL"):
+            url = reverse("post:global_comment_list")
+            assert url == "/api/v1/comments/"
+            response = client.get(url)
+            assert response.status_code == status.HTTP_200_OK
+
+        with allure.step("测试文章评论列表URL"):
+            url = reverse("post:comment_list_create", args=[1])
+            assert url == "/api/v1/comments/posts/1/"
+            
+        with allure.step("测试评论详情URL"):
+            url = reverse("post:comment_detail", args=[1])
+            assert url == "/api/v1/comments/1/"
+
+    @allure.story("URL路由")
+    @allure.severity(allure.severity_level.CRITICAL)
+    @allure.description("测试直接访问评论API的URL")
+    @pytest.mark.high
+    def test_direct_url_access(self, client, comment):
+        with allure.step("测试直接访问全局评论列表"):
+            response = client.get("/api/v1/comments/")
+            assert response.status_code == status.HTTP_200_OK
+            assert response.data["code"] == 200
+
+        with allure.step("测试直接访问文章评论列表"):
+            response = client.get(f"/api/v1/comments/posts/{comment.post.id}/")
+            assert response.status_code == status.HTTP_200_OK
+            assert response.data["code"] == 200
+
+        with allure.step("测试直接访问评论详情"):
+            response = client.get(f"/api/v1/comments/{comment.id}/")
+            assert response.status_code == status.HTTP_200_OK
+            assert response.data["code"] == 200

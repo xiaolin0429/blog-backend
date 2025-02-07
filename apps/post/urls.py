@@ -3,7 +3,6 @@ from django.urls import path
 from .views.post import (
     PostArchiveView,
     PostAutoSaveView,
-    PostDeleteView,
     PostDetailView,
     PostEmptyTrashView,
     PostLikeView,
@@ -21,8 +20,6 @@ urlpatterns = [
     # 文章基本操作
     path("posts/", PostListView.as_view(), name="post-list"),
     path("posts/<int:pk>/", PostDetailView.as_view(), name="post-detail"),
-    path("posts/<int:pk>/update/", PostUpdateView.as_view(), name="post-update"),
-    path("posts/<int:pk>/delete/", PostDeleteView.as_view(), name="post-delete"),
     # 文章互动
     path("posts/<int:pk>/like/", PostLikeView.as_view(), name="post-like"),
     path("posts/<int:pk>/view/", PostViewView.as_view(), name="post-view"),

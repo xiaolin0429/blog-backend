@@ -2,7 +2,6 @@ from .category import CategoryDetailView, CategoryListView, CategoryQuickCreateV
 from .comment import CommentDetailView, CommentListCreateView, GlobalCommentListView
 from .post import (
     PostArchiveView,
-    PostDeleteView,
     PostDetailView,
     PostEmptyTrashView,
     PostLikeView,
@@ -24,7 +23,6 @@ __all__ = [
     "PostListView",
     "PostDetailView",
     "PostUpdateView",
-    "PostDeleteView",
     "PostLikeView",
     "PostViewView",
     "PostArchiveView",

@@ -76,6 +76,10 @@ class PostCreateUpdateSerializer(TimezoneSerializerMixin, serializers.ModelSeria
 
     author = serializers.PrimaryKeyRelatedField(read_only=True)
     author_username = serializers.CharField(source="author.username", read_only=True)
+    tag_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
+    category_id = serializers.IntegerField(source='category.id', required=False)
+    tags = TagSerializer(many=True, read_only=True)
+    category = CategorySerializer(read_only=True)
 
     class Meta:
         model = Post
@@ -85,6 +89,8 @@ class PostCreateUpdateSerializer(TimezoneSerializerMixin, serializers.ModelSeria
             "content",
             "excerpt",
             "category",
+            "category_id",
+            "tag_ids",
             "tags",
             "status",
             "published_at",
@@ -93,26 +99,45 @@ class PostCreateUpdateSerializer(TimezoneSerializerMixin, serializers.ModelSeria
         ]
         read_only_fields = ["created_at", "updated_at", "author", "author_username"]
         extra_kwargs = {
-            "category": {"required": False},  # 分类字段设为非必填
-            "tags": {"required": False},  # 标签字段设为非必填
             "excerpt": {"required": False},  # 摘要字段设为非必填
             "published_at": {"required": False},  # 发布时间设为非必填
         }
 
     def create(self, validated_data):
+        tag_ids = validated_data.pop('tag_ids', [])
+        category_data = validated_data.pop('category', None)
         validated_data["author"] = self.context["request"].user
         if validated_data.get("status") == "published":
             validated_data["published_at"] = timezone.now()
-        return super().create(validated_data)
+        
+        # 处理分类
+        if category_data and 'id' in category_data:
+            validated_data['category_id'] = category_data['id']
+            
+        instance = super().create(validated_data)
+        if tag_ids:
+            instance.tags.set(tag_ids)
+        return instance
 
     def update(self, instance, validated_data):
+        tag_ids = validated_data.pop('tag_ids', None)
+        category_data = validated_data.pop('category', None)
+        
+        # 处理分类
+        if category_data and 'id' in category_data:
+            validated_data['category_id'] = category_data['id']
+            
         if (
             "status" in validated_data
             and validated_data["status"] == "published"
             and instance.status == "draft"
         ):
             validated_data["published_at"] = timezone.now()
-        return super().update(instance, validated_data)
+            
+        instance = super().update(instance, validated_data)
+        if tag_ids is not None:
+            instance.tags.set(tag_ids)
+        return instance
 
 
 class PostAutoSaveSerializer(serializers.ModelSerializer):
