@@ -123,3 +123,4 @@ htmlcov/
 .nox/
 .hypothesis/
 .mypy_cache/
+/.cursor/rules/blog-backend.mdc
