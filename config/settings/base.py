@@ -218,3 +218,36 @@ AUTH_USER_MODEL = "user.User"
 # Default avatar
 DEFAULT_AVATAR_URL = "/media/avatars/default.png"
 DEFAULT_AVATAR_PATH = os.path.join(MEDIA_ROOT, "avatars/default.png")
+
+# 日志配置
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {asctime} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+    },
+    "loggers": {
+        "apps.post": {  # 为 post 应用配置日志
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+}

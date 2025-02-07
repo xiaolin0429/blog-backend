@@ -30,6 +30,8 @@ class Post(models.Model):
     status = models.CharField(
         _("状态"), max_length=10, choices=STATUS_CHOICES, default="draft"
     )
+    pinned = models.BooleanField(_("是否置顶"), default=False)
+    allow_comment = models.BooleanField(_("允许评论"), default=True)
     views = models.PositiveIntegerField(_("浏览量"), default=0)
     likes = models.PositiveIntegerField(_("点赞数"), default=0)
     created_at = models.DateTimeField(_("创建时间"), default=timezone.now)

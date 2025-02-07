@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 
 from django.db import DatabaseError
@@ -6,7 +7,7 @@ from django.utils import timezone
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import generics, views, pagination
+from rest_framework import generics, pagination, views
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import ScopedRateThrottle
 
@@ -22,9 +23,13 @@ from ..serializers import (
     PostListSerializer,
 )
 
+# 创建日志记录器
+logger = logging.getLogger(__name__)
+
 
 class PostPagination(pagination.PageNumberPagination):
     """文章分页类"""
+
     page_size = 10
     page_size_query_param = "size"
     max_page_size = 50
@@ -145,15 +150,20 @@ class PostListView(generics.ListCreateAPIView):
         responses={201: PostCreateUpdateSerializer, 400: "参数错误", 401: "未认证"},
     )
     def post(self, request, *args, **kwargs):
+        logger.info(f"接收到创建文章请求，数据: {request.data}")
         serializer = self.get_serializer(data=request.data)
         try:
+            logger.info("开始验证数据")
             serializer.is_valid(raise_exception=True)
+            logger.info("数据验证通过，开始创建文章")
             self.perform_create(serializer)
+            logger.info("文章创建成功")
             return success_response(data=serializer.data)
         except Exception as e:
             error_data = None
             if hasattr(e, "detail"):
                 error_data = {"errors": e.detail}
+            logger.error(f"创建文章失败: {str(e)}, 错误详情: {error_data}")
             return error_response(code=400, message="创建文章失败", data=error_data)
 
     def get_queryset(self):
@@ -211,7 +221,7 @@ class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
-        if self.request.method in ['PUT', 'PATCH']:
+        if self.request.method in ["PUT", "PATCH"]:
             return PostCreateUpdateSerializer
         return PostDetailSerializer
 
@@ -384,13 +394,11 @@ class PostRestoreView(views.APIView):
             # 检查权限
             if not request.user.is_staff and post.author != request.user:
                 return success_response(code=404, message="文章不存在或无权限操作")
-            
+
             post.restore()
-            return success_response(data={
-                "id": post.id,
-                "title": post.title,
-                "status": post.status
-            })
+            return success_response(
+                data={"id": post.id, "title": post.title, "status": post.status}
+            )
         except Post.DoesNotExist:
             return success_response(code=404, message="文章不存在或无权限操作")
 
@@ -406,7 +414,7 @@ class PostPermanentDeleteView(views.APIView):
             # 检查权限
             if not request.user.is_staff and post.author != request.user:
                 return success_response(code=404, message="文章不存在或无权限操作")
-            
+
             post.delete()
             return success_response(code=204, message="success", data=None)
         except Post.DoesNotExist:
@@ -424,14 +432,12 @@ class PostEmptyTrashView(views.APIView):
             queryset = Post.objects.filter(is_deleted=True)
             if not request.user.is_staff:
                 queryset = queryset.filter(author=request.user)
-            
+
             deleted_count = queryset.count()
             queryset.delete()
-            
+
             return success_response(
-                code=204,
-                message="success",
-                data={"deleted_count": deleted_count}
+                code=204, message="success", data={"deleted_count": deleted_count}
             )
         except Exception as e:
             return success_response(code=400, message="清空回收站失败")
