@@ -100,7 +100,18 @@ cp .env.example .env
 # 4. 存储配置
 ```
 
-2. 环境变量说明：
+2. MinIO 配置：
+```bash
+# 创建 MinIO 配置文件
+cat > .env.minio << EOF
+MINIO_ROOT_USER=minioadmin
+MINIO_ROOT_PASSWORD=minioadmin
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+EOF
+```
+
+3. 环境变量说明：
 ```env
 # Django基础配置
 DEBUG=True
@@ -173,27 +184,102 @@ python manage.py createsuperuser
 
 ### 2.5 运行开发服务器
 
-1. 启动开发服务器：
+0. 启动顺序说明：
 ```bash
-python manage.py runserver
+# 服务启动的正确顺序：
+1. PostgreSQL 数据库
+2. Redis 服务
+3. MinIO 对象存储
+4. Django 开发服务器
+5. Celery Worker（可选）
+6. Celery Beat（可选）
 ```
 
-2. 启动Celery（需要新的终端）：
+1. 启动 MinIO 服务（需要新的终端）：
 ```bash
-# 收集静态文件
-python manage.py collectstatic --noinput
+# 创建数据目录
+mkdir -p ~/minio/data
 
-# 创建媒体文件目录
-mkdir -p media
+# 启动 MinIO 服务（确保使用正确的环境变量）
+source .env.minio && minio server ~/minio/data --console-address :9001 --address :9000
+
+# 访问 MinIO Console：http://localhost:9001
+# 用户名：minioadmin
+# 密码：minioadmin
+
+# 首次启动后需要创建 bucket：
+# 1. 登录 Console
+# 2. 点击 "Buckets" -> "Create Bucket"
+# 3. 输入名称：blog-media
+# 4. Access Policy 选择：private
+```
+
+2. 启动开发服务器（需要新的终端）：
+```bash
+# 激活虚拟环境（如果未激活）
+source .venv/bin/activate
+
+# 重新启动 MinIO
+source .env.minio && minio server ~/minio/data --console-address :9001 --address :9000
+
+# 在新终端中启动 Django
+source .env.minio && python manage.py runserver
+```
+
+3. 启动 Celery Worker（可选，需要新的终端）：
+```bash
+# 激活虚拟环境
+source .venv/bin/activate
+
+# 启动 Celery Worker
 # Windows
 celery -A config worker -l info -P eventlet
 # Linux/Mac
 celery -A config worker -l info
 ```
 
-3. 启动Celery Beat（可选，需要新的终端）：
+4. 启动 Celery Beat（可选，需要新的终端）：
 ```bash
+# 激活虚拟环境
+source .venv/bin/activate
+
+# 启动 Celery Beat
 celery -A config beat -l info
+```
+
+5. 停止服务：
+```bash
+# 停止 Django 开发服务器
+Ctrl + C
+
+# 停止 MinIO 服务
+Ctrl + C
+
+# 停止 Celery Worker
+Ctrl + C
+
+# 停止 Celery Beat
+Ctrl + C
+
+# 或者使用 pkill 命令一次性停止所有服务
+pkill -f "python manage.py runserver"
+pkill -f "minio server"
+pkill -f "celery"
+```
+
+6. 常见问题处理：
+```bash
+# 端口被占用
+lsof -i :8000  # 检查 Django 端口
+lsof -i :9000  # 检查 MinIO API 端口
+lsof -i :9001  # 检查 MinIO Console 端口
+
+# 清理端口
+kill -9 <PID>  # PID 是上面命令显示的进程 ID
+
+# 检查服务状态
+curl http://localhost:8000/health-check  # Django 健康检查
+curl http://localhost:9000/minio/health/live  # MinIO 健康检查
 ```
 
 ## 3. 测试
@@ -292,7 +378,21 @@ vim .env.prod
 
 ### 4.3 配置服务
 
-1. Gunicorn配置（gunicorn.conf.py）：
+1. MinIO 服务配置（/etc/supervisor/conf.d/minio.conf）：
+```ini
+[program:minio]
+command=/usr/local/bin/minio server /var/www/blog-backend/minio/data --console-address :9001 --address :9000
+directory=/var/www/blog-backend
+environment=MINIO_ROOT_USER="minioadmin",MINIO_ROOT_PASSWORD="minioadmin",MINIO_ACCESS_KEY="minioadmin",MINIO_SECRET_KEY="minioadmin"
+user=www-data
+autostart=true
+autorestart=true
+redirect_stderr=true
+stdout_logfile=/var/log/blog-backend/minio.log
+stderr_logfile=/var/log/blog-backend/minio-error.log
+```
+
+2. Gunicorn配置（gunicorn.conf.py）：
 ```python
 bind = '127.0.0.1:8000'
 workers = 4
@@ -303,7 +403,7 @@ max_requests = 1000
 max_requests_jitter = 50
 ```
 
-2. Supervisor配置（/etc/supervisor/conf.d/blog.conf）：
+3. Supervisor配置（/etc/supervisor/conf.d/blog.conf）：
 ```ini
 [program:blog-backend]
 command=/var/www/blog-backend/.venv/bin/gunicorn config.wsgi:application -c gunicorn.conf.py
@@ -327,7 +427,7 @@ stdout_logfile=/var/log/blog-backend/celery.log
 stderr_logfile=/var/log/blog-backend/celery-error.log
 ```
 
-3. Nginx配置（/etc/nginx/sites-available/blog-backend）：
+4. Nginx配置（/etc/nginx/sites-available/blog-backend）：
 ```nginx
 server {
     listen 80;
@@ -351,60 +451,97 @@ server {
 
 ### 4.4 启动服务
 
+0. 启动顺序说明：
+```bash
+# 生产环境服务启动的正确顺序：
+1. PostgreSQL 数据库
+2. Redis 服务
+3. MinIO 对象存储
+4. Django 应用（Gunicorn）
+5. Celery Worker
+6. Celery Beat（可选）
+7. Nginx 服务
+```
+
 1. 初始化数据：
 ```bash
+# 激活虚拟环境
+source .venv/bin/activate
+
+# 收集静态文件
+python manage.py collectstatic --noinput
+
+# 创建必要的目录
+mkdir -p media
+mkdir -p /var/log/blog-backend
+mkdir -p ~/minio/data
+
+# 创建数据库迁移
 python manage.py migrate
-python manage.py collectstatic
+
+# 创建超级用户
 python manage.py createsuperuser
 ```
 
 2. 启动服务：
 ```bash
-# 启动Supervisor
+# 启动 Supervisor（会自动启动 MinIO、Django、Celery）
 sudo supervisorctl reread
 sudo supervisorctl update
 sudo supervisorctl start all
 
-# 启动Nginx
+# 检查服务状态
+sudo supervisorctl status
+
+# 启动 Nginx
 sudo systemctl start nginx
 ```
 
-### 4.5 监控和维护
-
-1. 查看日志：
+3. 服务管理命令：
 ```bash
-# 应用日志
-tail -f /var/log/blog-backend/gunicorn.log
+# 查看所有服务状态
+sudo supervisorctl status
 
-# Celery日志
+# 重启特定服务
+sudo supervisorctl restart minio
+sudo supervisorctl restart blog-backend
+sudo supervisorctl restart blog-celery
+
+# 停止特定服务
+sudo supervisorctl stop minio
+sudo supervisorctl stop blog-backend
+sudo supervisorctl stop blog-celery
+
+# 查看服务日志
+tail -f /var/log/blog-backend/minio.log
+tail -f /var/log/blog-backend/gunicorn.log
 tail -f /var/log/blog-backend/celery.log
 
-# Nginx日志
-tail -f /var/log/nginx/access.log
+# Nginx 服务管理
+sudo systemctl status nginx  # 查看状态
+sudo systemctl restart nginx  # 重启
+sudo systemctl stop nginx  # 停止
 ```
 
-2. 备份数据：
+4. 常见问题处理：
 ```bash
-# 数据库备份
-pg_dump blog_db > backup/db_$(date +%Y%m%d).sql
+# 检查端口占用
+sudo lsof -i :80   # Nginx
+sudo lsof -i :8000 # Gunicorn
+sudo lsof -i :9000 # MinIO API
+sudo lsof -i :9001 # MinIO Console
 
-# 媒体文件备份
-rsync -av media/ backup/media/
-```
+# 检查服务日志
+sudo journalctl -u nginx
+sudo tail -f /var/log/blog-backend/*.log
 
-3. 更新应用：
-```bash
-# 拉取最新代码
-git pull
+# 检查服务健康状态
+curl -I http://localhost  # Nginx
+curl http://localhost/health-check  # Django
+curl http://localhost:9000/minio/health/live  # MinIO
 
-# 更新依赖
-pip install -r requirements/production.txt
-
-# 迁移数据库
-python manage.py migrate
-
-# 重启服务
-sudo supervisorctl restart all
+# 重置服务
+sudo supervisorctl restart all && sudo systemctl restart nginx
 ```
 
 ## 5. 安全建议

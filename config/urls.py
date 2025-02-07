@@ -44,6 +44,7 @@ api_v1_patterns = [
     path("user/", include("apps.user.urls")),  # 包含用户应用的所有URLs
     path("", include("apps.post.urls", namespace="post")),  # 使用post应用的主URLs
     path("plugin/", include("apps.plugin.urls")),
+    path("storage/", include("apps.core.urls")),  # 添加文件管理相关的URLs
 ]
 
 urlpatterns = [

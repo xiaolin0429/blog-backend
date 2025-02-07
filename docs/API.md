@@ -139,10 +139,38 @@
 
 - **文件相关（6000-6999）**
   - 6001: 文件大小超出限制
+    - 图片文件超过20MB
+    - 文档文件超过50MB
+    - 媒体文件超过200MB
   - 6002: 不支持的文件类型
+    - 图片仅支持：jpg、jpeg、png、gif、webp、svg、tiff、bmp、ico、heic、heif
+    - 文档仅支持：pdf、doc、docx、xls、xlsx、ppt、pptx、txt、md、csv、json、xml、zip、rar、7z
+    - 媒体仅支持：mp4、webm、avi、mov、mkv（视频），mp3、wav、midi、ogg、aac、flac、wma（音频）
   - 6003: 文件上传失败
+    - 存储服务不可用
+    - 网络传输错误
+    - 文件写入失败
   - 6004: 文件不存在
+    - 文件路径无效
+    - 文件已被删除
   - 6005: 无权限操作此文件
+    - 无权限上传文件
+    - 无权限删除文件
+    - 无权限重命名文件
+  - 6006: 文件名无效
+    - 文件名为空
+    - 文件名包含非法字符
+    - 文件名包含路径分隔符
+  - 6007: 文件名冲突
+    - 目标文件名已存在
+  - 6008: 文件操作失败
+    - 复制文件失败
+    - 删除文件失败
+    - 重命名文件失败
+  - 6009: 文件路径无效
+    - 路径格式错误
+    - 路径超出允许长度
+    - 路径包含非法字符
 
 - **系统相关（9000-9999）**
   - 9001: 系统维护中
@@ -1298,7 +1326,7 @@
 #### 6.1 上传文件
 - **接口说明**: 上传文件到服务器
 - **请求方式**: POST
-- **接口路径**: `/upload`
+- **接口路径**: `/api/v1/storage/upload`
 - **请求头**:
   - Authorization: Bearer {access}
   - Content-Type: multipart/form-data
@@ -1353,7 +1381,7 @@
 #### 6.2 删除文件
 - **接口说明**: 删除已上传的文件
 - **请求方式**: DELETE
-- **接口路径**: `/upload/{path}`
+- **接口路径**: `/api/v1/storage/upload/{path}`
 - **路径参数**:
   - path: 文件路径（必填，URL编码的相对路径）
 - **请求头**:
@@ -1376,7 +1404,7 @@
 #### 6.3 获取文件列表
 - **接口说明**: 获取已上传的文件列表
 - **请求方式**: GET
-- **接口路径**: `/upload`
+- **接口路径**: `/api/v1/storage/files`
 - **请求头**:
   - Authorization: Bearer {access}
 - **请求参数**:
@@ -2286,3 +2314,155 @@
   - 401: 未授权
   - 403: 无权限查看主题配置
   - 404: 主题不存在
+
+### 7. 文件管理
+
+#### 7.1 上传文件
+- **接口说明**: 上传文件到指定目录
+- **请求方式**: POST
+- **接口路径**: `/api/v1/storage/upload`
+- **请求头**:
+  - Authorization: Bearer {access}
+  - Content-Type: multipart/form-data
+- **请求参数**:
+  - file: 文件（必填）
+  - type: 文件类型（可选，默认自动识别）
+  - path: 保存路径（可选，默认按日期生成）
+- **支持的文件类型**:
+  - 图片文件：jpg、jpeg、png、gif、webp、svg、tiff、bmp、ico、heic、heif（限制20MB）
+  - 文档文件：pdf、doc、docx、xls、xlsx、ppt、pptx、txt、md、csv、json、xml、zip、rar、7z（限制50MB）
+  - 媒体文件：
+    - 视频：mp4、webm、avi、mov、mkv
+    - 音频：mp3、wav、midi、ogg、aac、flac、wma
+    - 限制200MB
+- **响应数据**:
+```json
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "url": "string",         // 文件访问URL
+        "path": "string",        // 文件存储路径
+        "name": "string",        // 文件名
+        "original_name": "string", // 原始文件名
+        "type": "string",        // 文件类型
+        "size": number,          // 文件大小(字节)
+        "mime_type": "string",   // MIME类型
+        "upload_time": "string"  // 上传时间
+    }
+}
+```
+- **错误码**:
+  - 400: 请求参数错误
+  - 401: 未登录或Token无效
+  - 403: 无权限上传文件
+  - 413: 文件大小超出限制
+  - 415: 不支持的文件类型
+
+#### 7.2 删除文件
+- **接口说明**: 删除指定路径的文件
+- **请求方式**: DELETE
+- **接口路径**: `/api/v1/storage/upload/{path}`
+- **请求头**:
+  - Authorization: Bearer {access}
+- **路径参数**:
+  - path: 文件路径（URL编码）
+- **响应数据**:
+```json
+{
+    "code": 200,
+    "message": "success",
+    "data": null
+}
+```
+- **错误码**:
+  - 401: 未登录或Token无效
+  - 403: 无权限删除文件
+  - 404: 文件不存在
+
+#### 7.3 获取文件列表
+- **接口说明**: 获取指定目录下的文件列表
+- **请求方式**: GET
+- **接口路径**: `/api/v1/storage/files`
+- **请求头**:
+  - Authorization: Bearer {access}
+- **查询参数**:
+  - path: 目录路径（可选）
+  - type: 文件类型(all/image/document/media)（可选）
+  - page: 页码（可选，默认1）
+  - size: 每页数量（可选，默认20，最大100）
+  - order_by: 排序字段（可选，默认-upload_time）
+- **排序说明**:
+  - name: 按文件名排序
+  - size: 按文件大小排序
+  - upload_time: 按上传时间排序（默认）
+  - type: 按文件类型排序
+  - 前缀 `-` 表示降序，如 `-upload_time`
+- **响应数据**:
+```json
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "total": number,        // 文件总数
+        "page": number,         // 当前页码
+        "size": number,         // 每页数量
+        "pages": number,        // 总页数
+        "items": [             // 文件列表
+            {
+                "url": "string",         // 文件访问URL
+                "path": "string",        // 文件存储路径
+                "name": "string",        // 文件名
+                "original_name": "string", // 原始文件名
+                "type": "string",        // 文件类型
+                "size": number,          // 文件大小(字节)
+                "mime_type": "string",   // MIME类型
+                "upload_time": "string"  // 上传时间
+            }
+        ]
+    }
+}
+```
+- **错误码**:
+  - 400: 请求参数错误
+  - 401: 未登录或Token无效
+  - 403: 无权限查看文件列表
+
+#### 7.4 重命名文件
+- **接口说明**: 重命名指定路径的文件
+- **请求方式**: PUT
+- **接口路径**: `/api/v1/storage/files/{path}/rename`
+- **请求头**:
+  - Authorization: Bearer {access}
+  - Content-Type: application/json
+- **路径参数**:
+  - path: 文件路径（URL编码）
+- **请求体**:
+```json
+{
+    "new_name": "string"  // 新文件名（不包含路径和扩展名）
+}
+```
+- **响应数据**:
+```json
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "url": "string",         // 文件访问URL
+        "path": "string",        // 文件存储路径
+        "name": "string",        // 文件名
+        "original_name": "string", // 原始文件名
+        "type": "string",        // 文件类型
+        "size": number,          // 文件大小(字节)
+        "mime_type": "string",   // MIME类型
+        "upload_time": "string"  // 上传时间
+    }
+}
+```
+- **错误码**:
+  - 400: 请求参数错误或新文件名为空
+  - 401: 未登录或Token无效
+  - 403: 无权限修改文件
+  - 404: 文件不存在
+  - 409: 新文件名已存在
