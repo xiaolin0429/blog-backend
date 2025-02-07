@@ -75,7 +75,7 @@ class TestPostCRUD:
     @pytest.mark.high
     def test_update_post(self, auth_client, post):
         with allure.step("准备更新数据"):
-            url = reverse("post:post_update", kwargs={"pk": post.id})
+            url = reverse("post:post_detail", kwargs={"pk": post.id})
             data = {"title": "Updated Title", "content": "Updated content"}
         
         with allure.step("发送更新请求"):
@@ -93,7 +93,7 @@ class TestPostCRUD:
     @pytest.mark.medium
     def test_update_nonexistent_post(self, auth_client):
         with allure.step("准备更新数据"):
-            url = reverse("post:post_update", kwargs={"pk": 999})
+            url = reverse("post:post_detail", kwargs={"pk": 999})
             data = {"title": "Updated Title", "content": "Updated content"}
         
         with allure.step("发送更新请求"):
@@ -101,7 +101,7 @@ class TestPostCRUD:
         
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
-            assert response.data["code"] == 400  # 服务器返回400而不是404
+            assert response.data["code"] == 400  # 更新失败返回400
             assert "更新文章失败" in response.data["message"]
 
     @allure.story("删除文章")
@@ -110,12 +110,13 @@ class TestPostCRUD:
     @pytest.mark.high
     def test_delete_post(self, auth_client, post):
         with allure.step("发送删除请求"):
-            url = reverse("post:post_delete", kwargs={"pk": post.id})
+            url = reverse("post:post_detail", kwargs={"pk": post.id})
             response = auth_client.delete(url)
         
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
+            assert "文章已移至回收站" in response.data["message"]
             post.refresh_from_db()
             assert post.is_deleted
 
@@ -125,12 +126,13 @@ class TestPostCRUD:
     @pytest.mark.medium
     def test_delete_nonexistent_post(self, auth_client):
         with allure.step("发送删除请求"):
-            url = reverse("post:post_delete", kwargs={"pk": 999})
+            url = reverse("post:post_detail", kwargs={"pk": 999})
             response = auth_client.delete(url)
         
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 404
+            assert "文章不存在或无权限删除" in response.data["message"]
 
     @allure.story("获取文章")
     @allure.severity(allure.severity_level.CRITICAL)
@@ -158,7 +160,7 @@ class TestPostCRUD:
     @pytest.mark.high
     def test_update_other_user_post(self, auth_client, other_post):
         with allure.step("准备更新数据"):
-            url = reverse("post:post_update", kwargs={"pk": other_post.id})
+            url = reverse("post:post_detail", kwargs={"pk": other_post.id})
             data = {"title": "Updated Title", "content": "Updated content"}
         
         with allure.step("发送更新请求"):
@@ -166,7 +168,7 @@ class TestPostCRUD:
         
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
-            assert response.data["code"] == 400  # 服务器返回400
+            assert response.data["code"] == 400  # 更新失败返回400
             assert "更新文章失败" in response.data["message"]
 
     @allure.story("删除文章")
@@ -175,10 +177,10 @@ class TestPostCRUD:
     @pytest.mark.high
     def test_delete_other_user_post(self, auth_client, other_post):
         with allure.step("发送删除请求"):
-            url = reverse("post:post_delete", kwargs={"pk": other_post.id})
+            url = reverse("post:post_detail", kwargs={"pk": other_post.id})
             response = auth_client.delete(url)
         
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
-            assert response.data["code"] == 404  # 服务器返回404
+            assert response.data["code"] == 404  # 无权限返回404
             assert "文章不存在或无权限删除" in response.data["message"]

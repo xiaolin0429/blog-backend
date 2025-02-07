@@ -203,11 +203,17 @@ class PostCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
 
 
-class PostDetailView(generics.RetrieveAPIView):
+class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
     """文章详情视图"""
 
     queryset = Post.objects.all()
     serializer_class = PostDetailSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method in ['PUT', 'PATCH']:
+            return PostCreateUpdateSerializer
+        return PostDetailSerializer
 
     def get_queryset(self):
         # 如果是swagger文档生成，返回空查询集
@@ -215,7 +221,9 @@ class PostDetailView(generics.RetrieveAPIView):
             return Post.objects.none()
 
         # 正常的查询逻辑
-        if self.request.user.is_staff:
+        if self.request.method in ["DELETE", "PUT", "PATCH"]:
+            return Post.objects.filter(author=self.request.user)
+        elif self.request.user.is_staff:
             return Post.objects.all()
         return Post.objects.filter(status="published")
 
@@ -229,6 +237,35 @@ class PostDetailView(generics.RetrieveAPIView):
             if hasattr(e, "detail"):
                 error_data = {"errors": e.detail}
             return error_response(code=404, message="文章不存在或无权限访问", data=error_data)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(
+                instance, data=request.data, partial=partial
+            )
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            return success_response(data=serializer.data)
+        except Exception as e:
+            error_data = None
+            if hasattr(e, "detail"):
+                error_data = {"errors": e.detail}
+            return error_response(code=400, message="更新文章失败", data=error_data)
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            instance.is_deleted = True
+            instance.deleted_at = timezone.now()
+            instance.save()
+            return success_response(message="文章已移至回收站")
+        except Exception as e:
+            error_data = None
+            if hasattr(e, "detail"):
+                error_data = {"errors": e.detail}
+            return error_response(code=404, message="文章不存在或无权限删除", data=error_data)
 
 
 class PostUpdateView(generics.UpdateAPIView):
@@ -262,35 +299,6 @@ class PostUpdateView(generics.UpdateAPIView):
 
     def perform_update(self, serializer):
         serializer.save()
-
-
-class PostDeleteView(generics.DestroyAPIView):
-    """文章删除视图"""
-
-    queryset = Post.objects.all()
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        # 如果是swagger文档生成，返回空查询集
-        if getattr(self, "swagger_fake_view", False):
-            return Post.objects.none()
-        return Post.objects.filter(author=self.request.user)
-
-    def destroy(self, request, *args, **kwargs):
-        try:
-            instance = self.get_object()
-            self.perform_destroy(instance)
-            return success_response(message="文章已移至回收站")
-        except Exception as e:
-            error_data = None
-            if hasattr(e, "detail"):
-                error_data = {"errors": e.detail}
-            return error_response(code=404, message="文章不存在或无权限删除", data=error_data)
-
-    def perform_destroy(self, instance):
-        instance.is_deleted = True
-        instance.deleted_at = timezone.now()
-        instance.save()
 
 
 class PostLikeView(views.APIView):
