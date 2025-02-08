@@ -10,6 +10,9 @@ from rest_framework.response import Response
 
 from apps.core.storage.factory import StorageFactory
 
+# 获取logger实例
+logger = logging.getLogger(__name__)
+
 
 class FileUploadView(views.APIView):
     permission_classes = [IsAuthenticated]
@@ -74,13 +77,15 @@ class FileUploadView(views.APIView):
             return Response({"code": 200, "message": "success", "data": result})
 
         except ValueError as e:
+            logger.warning("文件上传参数错误: %s", str(e))
             return Response(
-                {"code": 415, "message": str(e)},
+                {"code": 415, "message": "不支持的文件类型或大小超出限制"},
                 status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             )
         except Exception as e:
+            logger.error("文件上传失败: %s", str(e))
             return Response(
-                {"code": 500, "message": str(e)},
+                {"code": 500, "message": "文件上传失败，请稍后重试"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -108,8 +113,9 @@ class FileDeleteView(views.APIView):
                 {"code": 404, "message": "文件不存在"}, status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
+            logger.error("删除文件失败: %s", str(e))
             return Response(
-                {"code": 500, "message": str(e)},
+                {"code": 500, "message": "删除文件失败，请稍后重试"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -187,13 +193,15 @@ class FileListView(views.APIView):
             return Response({"code": 200, "message": "success", "data": result})
 
         except ValueError as e:
+            logger.warning("获取文件列表参数错误: %s", str(e))
             return Response(
-                {"code": 400, "message": str(e)},
+                {"code": 400, "message": "请求参数错误"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception as e:
+            logger.error("获取文件列表失败: %s", str(e))
             return Response(
-                {"code": 500, "message": str(e)},
+                {"code": 500, "message": "获取文件列表失败，请稍后重试"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -246,13 +254,15 @@ class FileRenameView(views.APIView):
             return Response({"code": 200, "message": "success", "data": result})
 
         except ValueError as e:
+            logger.warning("重命名文件参数错误: %s", str(e))
             return Response(
                 {"code": 400, "message": str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception as e:
+            logger.error("重命名文件失败: %s", str(e))
             return Response(
-                {"code": 500, "message": str(e)},
+                {"code": 500, "message": "重命名文件失败，请稍后重试"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -281,12 +291,14 @@ class FileContentView(views.APIView):
             return response
 
         except ValueError as e:
+            logger.warning("获取文件内容参数错误: %s", str(e))
             return Response(
-                {"code": 404, "message": str(e)},
+                {"code": 404, "message": "文件不存在"},
                 status=status.HTTP_404_NOT_FOUND,
             )
         except Exception as e:
+            logger.error("获取文件内容失败: %s", str(e))
             return Response(
-                {"code": 500, "message": str(e)},
+                {"code": 500, "message": "获取文件内容失败，请稍后重试"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
