@@ -58,8 +58,25 @@ class FileUploadView(views.APIView):
             # 获取上传的文件
             file = request.FILES.get("file")
             if not file:
+                logger.warning("文件上传失败：未提供文件")
                 return Response(
                     {"code": 400, "message": "未提供文件"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # 验证文件大小
+            if not hasattr(file, "size"):
+                logger.warning("文件上传失败：无法获取文件大小")
+                return Response(
+                    {"code": 400, "message": "无效的文件"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # 验证文件类型
+            if not hasattr(file, "content_type"):
+                logger.warning("文件上传失败：无法获取文件类型")
+                return Response(
+                    {"code": 400, "message": "无效的文件类型"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -74,6 +91,7 @@ class FileUploadView(views.APIView):
                 file_size=file.size,
             )
 
+            logger.info("文件上传成功: %s", file.name)
             return Response({"code": 200, "message": "success", "data": result})
 
         except ValueError as e:
@@ -81,6 +99,18 @@ class FileUploadView(views.APIView):
             return Response(
                 {"code": 415, "message": "不支持的文件类型或大小超出限制"},
                 status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            )
+        except PermissionError as e:
+            logger.warning("文件上传失败：无权限 - %s", str(e))
+            return Response(
+                {"code": 403, "message": "无权限上传文件"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except OSError as e:
+            logger.error("文件上传失败：系统错误 - %s", str(e))
+            return Response(
+                {"code": 500, "message": "文件存储失败，请稍后重试"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         except Exception as e:
             logger.error("文件上传失败: %s", str(e))
@@ -106,11 +136,33 @@ class FileDeleteView(views.APIView):
     def delete(self, request, file_id):
         """删除文件"""
         try:
+            if not file_id:
+                logger.warning("删除文件失败：文件ID为空")
+                return Response(
+                    {"code": 400, "message": "文件ID不能为空"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             storage = StorageFactory.get_storage()
             if storage.delete_file(file_id):
+                logger.info("文件删除成功: %s", file_id)
                 return Response({"code": 200, "message": "success"})
+
+            logger.warning("删除文件失败：文件不存在 - %s", file_id)
             return Response(
                 {"code": 404, "message": "文件不存在"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except PermissionError as e:
+            logger.warning("删除文件失败：无权限 - %s", file_id)
+            return Response(
+                {"code": 403, "message": "无权限删除此文件"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except OSError as e:
+            logger.error("删除文件失败：系统错误 - %s", str(e))
+            return Response(
+                {"code": 500, "message": "文件删除失败，请稍后重试"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         except Exception as e:
             logger.error("删除文件失败: %s", str(e))
@@ -236,6 +288,7 @@ class FileRenameView(views.APIView):
             # 获取并验证新文件名
             new_name = request.data.get("new_name")
             if not new_name:
+                logger.warning("重命名文件失败：新文件名为空")
                 return Response(
                     {"code": 400, "message": "新文件名不能为空"},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -243,6 +296,7 @@ class FileRenameView(views.APIView):
 
             # 验证新文件名格式
             if "/" in new_name or "\\" in new_name:
+                logger.warning("重命名文件失败：文件名包含非法字符 - %s", new_name)
                 return Response(
                     {"code": 400, "message": "新文件名不能包含路径分隔符"},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -256,8 +310,20 @@ class FileRenameView(views.APIView):
         except ValueError as e:
             logger.warning("重命名文件参数错误: %s", str(e))
             return Response(
-                {"code": 400, "message": str(e)},
+                {"code": 400, "message": "文件名格式不正确"},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+        except FileNotFoundError as e:
+            logger.warning("重命名文件失败：文件不存在 - %s", file_id)
+            return Response(
+                {"code": 404, "message": "文件不存在"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except FileExistsError as e:
+            logger.warning("重命名文件失败：目标文件名已存在 - %s", new_name)
+            return Response(
+                {"code": 409, "message": "新文件名已存在"},
+                status=status.HTTP_409_CONFLICT,
             )
         except Exception as e:
             logger.error("重命名文件失败: %s", str(e))
@@ -283,8 +349,22 @@ class FileContentView(views.APIView):
     def get(self, request, file_id):
         """获取文件内容"""
         try:
+            if not file_id:
+                logger.warning("获取文件内容失败：文件ID为空")
+                return Response(
+                    {"code": 400, "message": "文件ID不能为空"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             storage = StorageFactory.get_storage()
             content, mime_type = storage.get_file_content(file_id)
+
+            if not content:
+                logger.warning("获取文件内容失败：文件内容为空 - %s", file_id)
+                return Response(
+                    {"code": 404, "message": "文件不存在或内容为空"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
             response = HttpResponse(content, content_type=mime_type)
             response["Content-Disposition"] = "inline"
@@ -293,8 +373,20 @@ class FileContentView(views.APIView):
         except ValueError as e:
             logger.warning("获取文件内容参数错误: %s", str(e))
             return Response(
+                {"code": 400, "message": "无效的文件ID"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except FileNotFoundError as e:
+            logger.warning("获取文件内容失败：文件不存在 - %s", file_id)
+            return Response(
                 {"code": 404, "message": "文件不存在"},
                 status=status.HTTP_404_NOT_FOUND,
+            )
+        except PermissionError as e:
+            logger.warning("获取文件内容失败：无权限访问 - %s", file_id)
+            return Response(
+                {"code": 403, "message": "无权限访问此文件"},
+                status=status.HTTP_403_FORBIDDEN,
             )
         except Exception as e:
             logger.error("获取文件内容失败: %s", str(e))
