@@ -45,8 +45,9 @@
     "code": 200,
     "message": "success",
     "data": {
+        "id": "string",         // 文件唯一标识符
         "url": "string",         // 文件访问URL
-        "path": "string",        // 文件存储路径
+        "path": "string",        // 文件存储路径（已废弃，使用id代替）
         "name": "string",        // 文件名
         "original_name": "string", // 原始文件名
         "type": "string",        // 文件类型
@@ -71,7 +72,7 @@
 ## 2. 删除文件
 
 ### 基本信息
-- 请求路径: `/api/v1/storage/upload/{path}`
+- 请求路径: `/api/v1/storage/files/{file_id}`
 - 请求方法: `DELETE`
 - 权限要求: 需要登录
 
@@ -83,7 +84,7 @@
 ### 路径参数
 | 参数名 | 类型 | 是否必须 | 说明 | 示例 |
 | --- | --- | --- | --- | --- |
-| path | string | 是 | 文件路径（URL编码） | "image/2024/01/test.jpg" |
+| file_id | string | 是 | 文件ID | "a1b2c3d4e5f6" |
 
 ### 响应数据
 ```json
@@ -144,8 +145,9 @@
         "pages": number,        // 总页数
         "items": [             // 文件列表
             {
+                "id": "string",         // 文件唯一标识符
                 "url": "string",         // 文件访问URL
-                "path": "string",        // 文件存储路径
+                "path": "string",        // 文件存储路径（已废弃，使用id代替）
                 "name": "string",        // 文件名
                 "original_name": "string", // 原始文件名
                 "type": "string",        // 文件类型
@@ -170,7 +172,7 @@
 ## 4. 重命名文件
 
 ### 基本信息
-- 请求路径: `/api/v1/storage/files/{path}/rename`
+- 请求路径: `/api/v1/storage/files/{file_id}/rename`
 - 请求方法: `PUT`
 - 权限要求: 需要登录
 - Content-Type: application/json
@@ -184,7 +186,7 @@
 ### 路径参数
 | 参数名 | 类型 | 是否必须 | 说明 | 示例 |
 | --- | --- | --- | --- | --- |
-| path | string | 是 | 文件路径（URL编码） | "image/2024/01/test.jpg" |
+| file_id | string | 是 | 文件ID | "a1b2c3d4e5f6" |
 
 ### 请求体
 ```json
@@ -206,8 +208,9 @@
     "code": 200,
     "message": "success",
     "data": {
+        "id": "string",         // 文件唯一标识符
         "url": "string",         // 文件访问URL
-        "path": "string",        // 文件存储路径
+        "path": "string",        // 文件存储路径（已废弃，使用id代替）
         "name": "string",        // 文件名
         "original_name": "string", // 原始文件名
         "type": "string",        // 文件类型
@@ -256,3 +259,21 @@
 3. 操作是原子的，如果重命名过程中出现错误会自动回滚
 4. 重命名后的文件会保持原有的文件类型、大小等属性不变
 5. URL 中的文件路径需要进行 URL 编码
+
+### 字段说明
+| 字段名 | 类型 | 说明 |
+| --- | --- | --- |
+| id | string | 文件唯一标识符，用于文件的删除、重命名等操作 |
+| url | string | 文件访问URL，用于下载或预览文件 |
+| path | string | 文件存储路径（已废弃，请使用id字段） |
+| name | string | 文件名 |
+| original_name | string | 原始文件名 |
+| type | string | 文件类型(image/document/media) |
+| size | number | 文件大小(字节) |
+| mime_type | string | MIME类型 |
+| upload_time | string | 上传时间(ISO 8601格式) |
+
+### 注意事项
+1. `id` 字段是文件的唯一标识符，用于文件的删除、重命名等操作
+2. `path` 字段已废弃，为了向后兼容暂时保留，新代码请使用 `id` 字段
+3. 所有时间字段均使用 ISO 8601 格式，包含时区信息

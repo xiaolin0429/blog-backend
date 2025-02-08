@@ -1,12 +1,17 @@
 import logging
 
+from django.http import HttpResponse
+
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, views
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from ..storage import FileStorageService
+from apps.core.storage.factory import StorageFactory
+
+# 获取logger实例
+logger = logging.getLogger(__name__)
 
 
 class FileUploadView(views.APIView):
@@ -53,34 +58,64 @@ class FileUploadView(views.APIView):
             # 获取上传的文件
             file = request.FILES.get("file")
             if not file:
+                logger.warning("文件上传失败：未提供文件")
                 return Response(
                     {"code": 400, "message": "未提供文件"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            # 创建存储服务
-            storage = FileStorageService()
+            # 验证文件大小
+            if not hasattr(file, "size"):
+                logger.warning("文件上传失败：无法获取文件大小")
+                return Response(
+                    {"code": 400, "message": "无效的文件"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # 验证文件类型
+            if not hasattr(file, "content_type"):
+                logger.warning("文件上传失败：无法获取文件类型")
+                return Response(
+                    {"code": 400, "message": "无效的文件类型"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # 获取存储实例
+            storage = StorageFactory.get_storage()
 
             # 上传文件
-            result = storage.upload_file(
+            result = storage.save_file(
                 file=file,
-                original_filename=file.name,
+                filename=file.name,
                 content_type=file.content_type,
                 file_size=file.size,
             )
 
+            logger.info("文件上传成功: %s", file.name)
             return Response({"code": 200, "message": "success", "data": result})
 
         except ValueError as e:
-            logging.error("ValueError in FileUploadView: %s", str(e))
+            logger.warning("文件上传参数错误: %s", str(e))
             return Response(
-                {"code": 415, "message": "不支持的文件类型"},
+                {"code": 415, "message": "不支持的文件类型或大小超出限制"},
                 status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             )
-        except RuntimeError as e:
-            logging.error("RuntimeError in FileUploadView: %s", str(e))
+        except PermissionError as e:
+            logger.warning("文件上传失败：无权限 - %s", str(e))
             return Response(
-                {"code": 500, "message": "服务器内部错误"},
+                {"code": 403, "message": "无权限上传文件"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except OSError as e:
+            logger.error("文件上传失败：系统错误 - %s", str(e))
+            return Response(
+                {"code": 500, "message": "文件存储失败，请稍后重试"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        except Exception as e:
+            logger.error("文件上传失败: %s", str(e))
+            return Response(
+                {"code": 500, "message": "文件上传失败，请稍后重试"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -98,19 +133,41 @@ class FileDeleteView(views.APIView):
             404: "文件不存在",
         },
     )
-    def delete(self, request, path):
+    def delete(self, request, file_id):
         """删除文件"""
         try:
-            storage = FileStorageService()
-            if storage.delete_file(path):
+            if not file_id:
+                logger.warning("删除文件失败：文件ID为空")
+                return Response(
+                    {"code": 400, "message": "文件ID不能为空"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            storage = StorageFactory.get_storage()
+            if storage.delete_file(file_id):
+                logger.info("文件删除成功: %s", file_id)
                 return Response({"code": 200, "message": "success"})
+
+            logger.warning("删除文件失败：文件不存在 - %s", file_id)
             return Response(
                 {"code": 404, "message": "文件不存在"}, status=status.HTTP_404_NOT_FOUND
             )
-        except Exception as e:
-            logging.error("Error in FileDeleteView: %s", str(e))
+        except PermissionError as e:
+            logger.warning("删除文件失败：无权限 - %s", file_id)
             return Response(
-                {"code": 500, "message": "服务器内部错误"},
+                {"code": 403, "message": "无权限删除此文件"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except OSError as e:
+            logger.error("删除文件失败：系统错误 - %s", str(e))
+            return Response(
+                {"code": 500, "message": "文件删除失败，请稍后重试"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        except Exception as e:
+            logger.error("删除文件失败: %s", str(e))
+            return Response(
+                {"code": 500, "message": "删除文件失败，请稍后重试"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -176,7 +233,7 @@ class FileListView(views.APIView):
             order_by = request.query_params.get("order_by", "-upload_time")
 
             # 获取文件列表
-            storage = FileStorageService()
+            storage = StorageFactory.get_storage()
             result = storage.get_file_list(
                 path=path,
                 file_type=file_type,
@@ -188,15 +245,15 @@ class FileListView(views.APIView):
             return Response({"code": 200, "message": "success", "data": result})
 
         except ValueError as e:
-            logging.error("ValueError in FileListView: %s", str(e))
+            logger.warning("获取文件列表参数错误: %s", str(e))
             return Response(
                 {"code": 400, "message": "请求参数错误"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception as e:
-            logging.error("Error in FileListView: %s", str(e))
+            logger.error("获取文件列表失败: %s", str(e))
             return Response(
-                {"code": 500, "message": "服务器内部错误"},
+                {"code": 500, "message": "获取文件列表失败，请稍后重试"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -225,12 +282,13 @@ class FileRenameView(views.APIView):
             409: "新文件名已存在",
         },
     )
-    def put(self, request, path):
+    def put(self, request, file_id):
         """重命名文件"""
         try:
             # 获取并验证新文件名
             new_name = request.data.get("new_name")
             if not new_name:
+                logger.warning("重命名文件失败：新文件名为空")
                 return Response(
                     {"code": 400, "message": "新文件名不能为空"},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -238,45 +296,101 @@ class FileRenameView(views.APIView):
 
             # 验证新文件名格式
             if "/" in new_name or "\\" in new_name:
+                logger.warning("重命名文件失败：文件名包含非法字符 - %s", new_name)
                 return Response(
                     {"code": 400, "message": "新文件名不能包含路径分隔符"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            # 创建存储服务
-            storage = FileStorageService()
-
-            try:
-                # 检查文件是否存在
-                storage.client.stat_object(
-                    bucket_name=storage.bucket_name, object_name=path
-                )
-            except Exception:
-                return Response(
-                    {"code": 404, "message": "文件不存在"}, status=status.HTTP_404_NOT_FOUND
-                )
-
-            try:
-                # 重命名文件
-                result = storage.rename_file(path, new_name)
-                return Response({"code": 200, "message": "success", "data": result})
-            except RuntimeError as e:
-                if "已存在" in str(e):
-                    return Response(
-                        {"code": 409, "message": "新文件名已存在"},
-                        status=status.HTTP_409_CONFLICT,
-                    )
-                raise
+            # 重命名文件
+            storage = StorageFactory.get_storage()
+            result = storage.rename_file(file_id, new_name)
+            return Response({"code": 200, "message": "success", "data": result})
 
         except ValueError as e:
-            logging.error("ValueError in FileRenameView: %s", str(e))
+            logger.warning("重命名文件参数错误: %s", str(e))
             return Response(
-                {"code": 400, "message": "请求参数错误"},
+                {"code": 400, "message": "文件名格式不正确"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        except Exception as e:
-            logging.error("Error in FileRenameView: %s", str(e))
+        except FileNotFoundError as e:
+            logger.warning("重命名文件失败：文件不存在 - %s", file_id)
             return Response(
-                {"code": 500, "message": "服务器内部错误"},
+                {"code": 404, "message": "文件不存在"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except FileExistsError as e:
+            logger.warning("重命名文件失败：目标文件名已存在 - %s", new_name)
+            return Response(
+                {"code": 409, "message": "新文件名已存在"},
+                status=status.HTTP_409_CONFLICT,
+            )
+        except Exception as e:
+            logger.error("重命名文件失败: %s", str(e))
+            return Response(
+                {"code": 500, "message": "重命名文件失败，请稍后重试"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class FileContentView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="获取文件内容",
+        operation_description="获取文件的二进制内容",
+        responses={
+            200: openapi.Response("获取成功"),
+            401: "未授权",
+            403: "无权限访问文件",
+            404: "文件不存在",
+        },
+    )
+    def get(self, request, file_id):
+        """获取文件内容"""
+        try:
+            if not file_id:
+                logger.warning("获取文件内容失败：文件ID为空")
+                return Response(
+                    {"code": 400, "message": "文件ID不能为空"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            storage = StorageFactory.get_storage()
+            content, mime_type = storage.get_file_content(file_id)
+
+            if not content:
+                logger.warning("获取文件内容失败：文件内容为空 - %s", file_id)
+                return Response(
+                    {"code": 404, "message": "文件不存在或内容为空"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            response = HttpResponse(content, content_type=mime_type)
+            response["Content-Disposition"] = "inline"
+            return response
+
+        except ValueError as e:
+            logger.warning("获取文件内容参数错误: %s", str(e))
+            return Response(
+                {"code": 400, "message": "无效的文件ID"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except FileNotFoundError as e:
+            logger.warning("获取文件内容失败：文件不存在 - %s", file_id)
+            return Response(
+                {"code": 404, "message": "文件不存在"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except PermissionError as e:
+            logger.warning("获取文件内容失败：无权限访问 - %s", file_id)
+            return Response(
+                {"code": 403, "message": "无权限访问此文件"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except Exception as e:
+            logger.error("获取文件内容失败: %s", str(e))
+            return Response(
+                {"code": 500, "message": "获取文件内容失败，请稍后重试"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

@@ -1331,121 +1331,136 @@
   - Authorization: Bearer {access}
   - Content-Type: multipart/form-data
 - **请求参数**:
-  - file: 文件（必填，multipart/form-data格式）
+  - file: 文件（必填）
   - type: 文件类型（可选，默认自动识别）
-    - image: 图片文件
-    - document: 文档文件
-    - media: 媒体文件
   - path: 保存路径（可选，默认按日期生成）
-    - 格式：目录/子目录
-    - 示例：posts/2024/01
-- **说明**:
-  - 支持的文件类型：
-    - 图片：jpg、jpeg、png、gif、webp
-    - 文档：pdf、doc、docx、txt、md
-    - 媒体：mp4、mp3、wav
-  - 文件大小限制：
-    - 图片：最大10MB
-    - 文档：最大20MB
-    - 媒体：最大50MB
-  - 文件命名规则：
-    - 原文件名会被转换为安全的URL友好格式
-    - 添加时间戳和随机字符串避免重名
-    - 保留原始扩展名
-- **响应数据**
+- **响应数据**:
 ```json
 {
-    "code": 200,          // 状态码（必返回）
-    "message": "success", // 状态信息（必返回）
-    "data": {            // 响应数据（必返回）
-        "url": "string",      // 文件访问URL（必返回）
-        "path": "string",     // 文件存储路径（必返回）
-        "name": "string",     // 文件名（必返回）
-        "originalName": "string", // 原始文件名（必返回）
-        "type": "string",     // 文件类型（必返回）
-        "size": number,       // 文件大小(字节)（必返回）
-        "mimeType": "string", // MIME类型（必返回）
-        "uploadTime": "string" // 上传时间（必返回）
-    },
-    "timestamp": "string", // 时间戳（必返回）
-    "requestId": "string"  // 请求ID（必返回）
+    "code": 200,
+    "message": "success",
+    "data": {
+        "id": "string",         // 文件唯一标识符
+        "url": "string",        // 文件访问URL
+        "path": "string",       // 文件存储路径（已废弃，使用id代替）
+        "name": "string",       // 文件名
+        "original_name": "string", // 原始文件名
+        "type": "string",       // 文件类型
+        "size": number,         // 文件大小(字节)
+        "mime_type": "string",  // MIME类型
+        "upload_time": "string" // 上传时间
+    }
 }
 ```
-- **错误码**:
-  - 400: 请求参数错误
-  - 401: 未授权
-  - 403: 无权限上传文件
-  - 413: 文件大小超出限制
-  - 415: 不支持的文件类型
 
 #### 6.2 删除文件
-- **接口说明**: 删除已上传的文件
+- **接口说明**: 删除指定文件
 - **请求方式**: DELETE
-- **接口路径**: `/api/v1/storage/upload/{path}`
+- **接口路径**: `/api/v1/storage/files/{file_id}`
 - **路径参数**:
-  - path: 文件路径（必填，URL编码的相对路径）
-- **请求头**:
-  - Authorization: Bearer {access}
-- **响应数据**
+  - file_id: 文件ID（必填）
+- **响应数据**:
 ```json
 {
-    "code": 200,          // 状态码（必返回）
-    "message": "success", // 状态信息（必返回）
-    "data": null,        // 响应数据
-    "timestamp": "string", // 时间戳（必返回）
-    "requestId": "string"  // 请求ID（必返回）
+    "code": 200,
+    "message": "success",
+    "data": null
 }
 ```
-- **错误码**:
-  - 401: 未授权
-  - 403: 无权限删除文件
-  - 404: 文件不存在
 
 #### 6.3 获取文件列表
-- **接口说明**: 获取已上传的文件列表
+- **接口说明**: 获取文件列表，支持分页和筛选
 - **请求方式**: GET
 - **接口路径**: `/api/v1/storage/files`
-- **请求头**:
-  - Authorization: Bearer {access}
-- **请求参数**:
-  - path: 目录路径（可选，默认根目录）
-  - type: 文件类型（可选）：all|image|document|media
+- **查询参数**:
+  - path: 目录路径（可选）
+  - type: 文件类型(all/image/document/media)（可选）
   - page: 页码（可选，默认1）
   - size: 每页数量（可选，默认20，最大100）
-  - ordering: 排序字段（可选，默认-uploadTime）
-    - 支持字段：name、size、uploadTime
-    - 降序在字段前加-，如-uploadTime
-- **响应数据**
+  - order_by: 排序字段（可选，默认-upload_time）
+- **响应数据**:
 ```json
 {
-    "code": 200,          // 状态码（必返回）
-    "message": "success", // 状态信息（必返回）
-    "data": {            // 响应数据（必返回）
-        "total": number,      // 文件总数（必返回）
-        "page": number,       // 当前页码（必返回）
-        "size": number,       // 每页数量（必返回）
-        "pages": number,      // 总页数（必返回）
-        "items": [           // 文件列表（必返回）
+    "code": 200,
+    "message": "success",
+    "data": {
+        "total": number,        // 文件总数
+        "page": number,         // 当前页码
+        "size": number,         // 每页数量
+        "pages": number,        // 总页数
+        "items": [             // 文件列表
             {
-                "url": "string",      // 文件访问URL（必返回）
-                "path": "string",     // 文件存储路径（必返回）
-                "name": "string",     // 文件名（必返回）
-                "originalName": "string", // 原始文件名（必返回）
-                "type": "string",     // 文件类型（必返回）
-                "size": number,       // 文件大小(字节)（必返回）
-                "mimeType": "string", // MIME类型（必返回）
-                "uploadTime": "string" // 上传时间（必返回）
+                "id": "string",         // 文件唯一标识符
+                "url": "string",        // 文件访问URL
+                "path": "string",       // 文件存储路径（已废弃，使用id代替）
+                "name": "string",       // 文件名
+                "original_name": "string", // 原始文件名
+                "type": "string",       // 文件类型
+                "size": number,         // 文件大小(字节)
+                "mime_type": "string",  // MIME类型
+                "upload_time": "string" // 上传时间
             }
         ]
-    },
-    "timestamp": "string", // 时间戳（必返回）
-    "requestId": "string"  // 请求ID（必返回）
+    }
 }
 ```
-- **错误码**:
-  - 400: 请求参数错误
-  - 401: 未授权
-  - 403: 无权限查看文件列表
+
+#### 6.4 重命名文件
+- **接口说明**: 重命名指定文件
+- **请求方式**: PUT
+- **接口路径**: `/api/v1/storage/files/{file_id}/rename`
+- **路径参数**:
+  - file_id: 文件ID（必填）
+- **请求体**:
+```json
+{
+    "new_name": "string"  // 新文件名（不包含路径和扩展名）
+}
+```
+- **响应数据**:
+```json
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "id": "string",         // 文件唯一标识符
+        "url": "string",        // 文件访问URL
+        "path": "string",       // // 文件存储路径（已废弃，使用id代替）
+        "name": "string",       // 文件名
+        "original_name": "string", // 原始文件名
+        "type": "string",       // 文件类型
+        "size": number,         // 文件大小(字节)
+        "mime_type": "string",  // MIME类型
+        "upload_time": "string" // 上传时间
+    }
+}
+```
+
+#### 6.5 获取文件内容
+- **接口说明**: 获取文件的二进制内容
+- **请求方式**: GET
+- **接口路径**: `/api/v1/storage/files/{file_id}/content`
+- **路径参数**:
+  - file_id: 文件ID（必填）
+- **响应数据**: 文件的二进制内容，Content-Type 为文件的 MIME 类型
+
+### 字段说明
+| 字段名 | 类型 | 说明 |
+| --- | --- | --- |
+| id | string | 文件唯一标识符，用于文件的删除、重命名等操作 |
+| url | string | 文件访问URL，用于下载或预览文件 |
+| path | string | 文件存储路径（已废弃，请使用id字段） |
+| name | string | 文件名 |
+| original_name | string | 原始文件名 |
+| type | string | 文件类型(image/document/media) |
+| size | number | 文件大小(字节) |
+| mime_type | string | MIME类型 |
+| upload_time | string | 上传时间(ISO 8601格式) |
+
+### 注意事项
+1. `id` 字段是文件的唯一标识符，用于文件的删除、重命名等操作
+2. `path` 字段已废弃，为了向后兼容暂时保留，新代码请使用 `id` 字段
+3. 所有时间字段均使用 ISO 8601 格式，包含时区信息
 
 ### 7. 搜索功能
 

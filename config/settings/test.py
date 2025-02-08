@@ -104,6 +104,7 @@ INSTALLED_APPS = [
     "storages",
     "django_filters",
     "drf_yasg",
+    "apps.core.apps.CoreConfig",
     "apps.post.apps.PostConfig",
     "apps.user.apps.UserConfig",
     "apps.plugin.apps.PluginConfig",
