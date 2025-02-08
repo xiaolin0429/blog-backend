@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 
 from django.core.cache import cache
@@ -11,6 +12,9 @@ from rest_framework.views import APIView
 from apps.core.models.statistics import UserStatistics, VisitStatistics
 from apps.post.models import Category, Post, Tag
 from apps.post.models.comment import Comment
+
+# 获取logger实例
+logger = logging.getLogger(__name__)
 
 
 class BaseStatisticsView(APIView):
@@ -74,7 +78,9 @@ class ContentStatisticsView(BaseStatisticsView):
             cache.set(cache_key, data, self.cache_timeout)
             return Response(data)
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
+            # 记录错误日志，但不暴露具体错误信息
+            logger.error("获取内容统计数据失败: %s", str(e))
+            return Response({"error": "获取统计数据失败，请稍后重试"}, status=500)
 
     def _get_posts_statistics(self, start_date, end_date):
         """获取文章统计数据"""
@@ -101,9 +107,7 @@ class ContentStatisticsView(BaseStatisticsView):
             top_authors = (
                 Post.objects.filter(is_deleted=False)
                 .values("author_id", "author__username")
-                .annotate(
-                    post_count=Count("id"),
-                )
+                .annotate(post_count=Count("id"))
                 .order_by("-post_count")[:10]
             )
 
@@ -122,6 +126,7 @@ class ContentStatisticsView(BaseStatisticsView):
                 ],
             }
         except Exception as e:
+            logger.error("获取文章统计数据失败: %s", str(e))
             return {
                 "total": 0,
                 "published": 0,
@@ -151,6 +156,7 @@ class ContentStatisticsView(BaseStatisticsView):
                 "spam": spam,
             }
         except Exception as e:
+            logger.error("获取评论统计数据失败: %s", str(e))
             return {"total": 0, "approved": 0, "pending": 0, "spam": 0}
 
     def _get_categories_statistics(self):
@@ -183,6 +189,7 @@ class ContentStatisticsView(BaseStatisticsView):
                 ],
             }
         except Exception as e:
+            logger.error("获取分类统计数据失败: %s", str(e))
             return {"total": 0, "topCategories": []}
 
     def _get_tags_statistics(self):
@@ -215,6 +222,7 @@ class ContentStatisticsView(BaseStatisticsView):
                 ],
             }
         except Exception as e:
+            logger.error("获取标签统计数据失败: %s", str(e))
             return {"total": 0, "topTags": []}
 
 
@@ -222,40 +230,44 @@ class VisitStatisticsView(BaseStatisticsView):
     """访问统计视图"""
 
     def get(self, request):
-        start_date, end_date = self.get_date_range(request)
-        cache_key = self.get_cache_key("visit_stats", start_date, end_date)
+        try:
+            start_date, end_date = self.get_date_range(request)
+            cache_key = self.get_cache_key("visit_stats", start_date, end_date)
 
-        # 尝试从缓存获取数据
-        cached_data = cache.get(cache_key)
-        if cached_data:
-            return Response(cached_data)
+            # 尝试从缓存获取数据
+            cached_data = cache.get(cache_key)
+            if cached_data:
+                return Response(cached_data)
 
-        # 查询统计数据
-        stats = VisitStatistics.objects.filter(
-            date__range=[start_date, end_date]
-        ).order_by("date")
+            # 查询统计数据
+            stats = VisitStatistics.objects.filter(
+                date__range=[start_date, end_date]
+            ).order_by("date")
 
-        # 准备返回数据
-        data = {
-            "total": {
-                "pv": sum(s.pv for s in stats),
-                "uv": sum(s.uv for s in stats),
-                "ip": sum(s.ip_count for s in stats),
-            },
-            "trends": [
-                {
-                    "date": s.date.strftime("%Y-%m-%d"),
-                    "pv": s.pv,
-                    "uv": s.uv,
-                    "ip": s.ip_count,
-                }
-                for s in stats
-            ],
-        }
+            # 准备返回数据
+            data = {
+                "total": {
+                    "pv": sum(s.pv for s in stats),
+                    "uv": sum(s.uv for s in stats),
+                    "ip": sum(s.ip_count for s in stats),
+                },
+                "trends": [
+                    {
+                        "date": s.date.strftime("%Y-%m-%d"),
+                        "pv": s.pv,
+                        "uv": s.uv,
+                        "ip": s.ip_count,
+                    }
+                    for s in stats
+                ],
+            }
 
-        # 缓存数据
-        cache.set(cache_key, data, self.cache_timeout)
-        return Response(data)
+            # 缓存数据
+            cache.set(cache_key, data, self.cache_timeout)
+            return Response(data)
+        except Exception as e:
+            logger.error("获取访问统计数据失败: %s", str(e))
+            return Response({"error": "获取统计数据失败，请稍后重试"}, status=500)
 
 
 class UserStatisticsView(BaseStatisticsView):
@@ -299,4 +311,5 @@ class UserStatisticsView(BaseStatisticsView):
             cache.set(cache_key, data, self.cache_timeout)
             return Response(data)
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
+            logger.error("获取用户统计数据失败: %s", str(e))
+            return Response({"error": "获取统计数据失败，请稍后重试"}, status=500)
