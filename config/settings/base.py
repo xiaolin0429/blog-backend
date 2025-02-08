@@ -251,3 +251,6 @@ LOGGING = {
         "level": "INFO",
     },
 }
+
+# 存储后端配置
+STORAGE_BACKEND = "database"  # 可选值: database, minio, oss等

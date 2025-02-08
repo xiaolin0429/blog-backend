@@ -1,10 +1,9 @@
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.utils.html import mark_safe
-from django.db.models import Count
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -68,9 +67,15 @@ class SearchSuggestView(APIView):
                                             "category": openapi.Schema(
                                                 type=openapi.TYPE_OBJECT,
                                                 properties={
-                                                    "id": openapi.Schema(type=openapi.TYPE_INTEGER),
-                                                    "name": openapi.Schema(type=openapi.TYPE_STRING),
-                                                    "level": openapi.Schema(type=openapi.TYPE_INTEGER),
+                                                    "id": openapi.Schema(
+                                                        type=openapi.TYPE_INTEGER
+                                                    ),
+                                                    "name": openapi.Schema(
+                                                        type=openapi.TYPE_STRING
+                                                    ),
+                                                    "level": openapi.Schema(
+                                                        type=openapi.TYPE_INTEGER
+                                                    ),
                                                 },
                                             ),
                                             "post_count": openapi.Schema(
@@ -103,7 +108,7 @@ class SearchSuggestView(APIView):
                 Q(title__icontains=keyword) | Q(excerpt__icontains=keyword),
                 is_deleted=False,
                 status="published",
-            ).select_related('category')[:limit]
+            ).select_related("category")[:limit]
 
             for post in posts:
                 suggestions.append(
@@ -116,17 +121,19 @@ class SearchSuggestView(APIView):
                             "id": post.category.id,
                             "name": post.category.name,
                             "level": post.category.level,
-                        } if post.category else None,
+                        }
+                        if post.category
+                        else None,
                         "post_count": None,  # 文章类型不需要post_count
                         "level": None,  # 文章类型不需要level
                     }
                 )
 
             # 搜索分类
-            categories = Category.objects.filter(
-                name__icontains=keyword
-            ).annotate(
-                post_count=Count('post', filter=Q(post__is_deleted=False, post__status='published'))
+            categories = Category.objects.filter(name__icontains=keyword).annotate(
+                post_count=Count(
+                    "post", filter=Q(post__is_deleted=False, post__status="published")
+                )
             )[:limit]
 
             for category in categories:
@@ -135,7 +142,9 @@ class SearchSuggestView(APIView):
                         "type": "category",
                         "id": category.id,
                         "title": category.name,  # 使用title字段保持一致性
-                        "excerpt": category.description[:100] if category.description else "",
+                        "excerpt": category.description[:100]
+                        if category.description
+                        else "",
                         "category": None,  # 分类类型不需要category
                         "post_count": category.post_count,
                         "level": category.level,
@@ -143,10 +152,10 @@ class SearchSuggestView(APIView):
                 )
 
             # 搜索标签
-            tags = Tag.objects.filter(
-                name__icontains=keyword
-            ).annotate(
-                post_count=Count('post', filter=Q(post__is_deleted=False, post__status='published'))
+            tags = Tag.objects.filter(name__icontains=keyword).annotate(
+                post_count=Count(
+                    "post", filter=Q(post__is_deleted=False, post__status="published")
+                )
             )[:limit]
 
             for tag in tags:
@@ -174,9 +183,10 @@ class SearchSuggestView(APIView):
             return success_response(data={"suggestions": suggestions})
 
         except Exception as e:
-            import traceback
-            traceback.print_exc()  # 打印详细错误信息
-            return error_response(code=400, message=str(e))
+            return Response(
+                {"code": 500, "message": "搜索失败"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class SearchView(generics.ListAPIView):
@@ -279,24 +289,44 @@ class SearchView(generics.ListAPIView):
                                     items=openapi.Schema(
                                         type=openapi.TYPE_OBJECT,
                                         properties={
-                                            "id": openapi.Schema(type=openapi.TYPE_INTEGER),
-                                            "title": openapi.Schema(type=openapi.TYPE_STRING),
-                                            "excerpt": openapi.Schema(type=openapi.TYPE_STRING),
-                                            "content": openapi.Schema(type=openapi.TYPE_STRING),
+                                            "id": openapi.Schema(
+                                                type=openapi.TYPE_INTEGER
+                                            ),
+                                            "title": openapi.Schema(
+                                                type=openapi.TYPE_STRING
+                                            ),
+                                            "excerpt": openapi.Schema(
+                                                type=openapi.TYPE_STRING
+                                            ),
+                                            "content": openapi.Schema(
+                                                type=openapi.TYPE_STRING
+                                            ),
                                             "author": openapi.Schema(
                                                 type=openapi.TYPE_OBJECT,
                                                 properties={
-                                                    "id": openapi.Schema(type=openapi.TYPE_INTEGER),
-                                                    "username": openapi.Schema(type=openapi.TYPE_STRING),
-                                                    "nickname": openapi.Schema(type=openapi.TYPE_STRING),
+                                                    "id": openapi.Schema(
+                                                        type=openapi.TYPE_INTEGER
+                                                    ),
+                                                    "username": openapi.Schema(
+                                                        type=openapi.TYPE_STRING
+                                                    ),
+                                                    "nickname": openapi.Schema(
+                                                        type=openapi.TYPE_STRING
+                                                    ),
                                                 },
                                             ),
                                             "category": openapi.Schema(
                                                 type=openapi.TYPE_OBJECT,
                                                 properties={
-                                                    "id": openapi.Schema(type=openapi.TYPE_INTEGER),
-                                                    "name": openapi.Schema(type=openapi.TYPE_STRING),
-                                                    "level": openapi.Schema(type=openapi.TYPE_INTEGER),
+                                                    "id": openapi.Schema(
+                                                        type=openapi.TYPE_INTEGER
+                                                    ),
+                                                    "name": openapi.Schema(
+                                                        type=openapi.TYPE_STRING
+                                                    ),
+                                                    "level": openapi.Schema(
+                                                        type=openapi.TYPE_INTEGER
+                                                    ),
                                                 },
                                             ),
                                             "tags": openapi.Schema(
@@ -304,13 +334,21 @@ class SearchView(generics.ListAPIView):
                                                 items=openapi.Schema(
                                                     type=openapi.TYPE_OBJECT,
                                                     properties={
-                                                        "id": openapi.Schema(type=openapi.TYPE_INTEGER),
-                                                        "name": openapi.Schema(type=openapi.TYPE_STRING),
+                                                        "id": openapi.Schema(
+                                                            type=openapi.TYPE_INTEGER
+                                                        ),
+                                                        "name": openapi.Schema(
+                                                            type=openapi.TYPE_STRING
+                                                        ),
                                                     },
                                                 ),
                                             ),
-                                            "created_at": openapi.Schema(type=openapi.TYPE_STRING),
-                                            "updated_at": openapi.Schema(type=openapi.TYPE_STRING),
+                                            "created_at": openapi.Schema(
+                                                type=openapi.TYPE_STRING
+                                            ),
+                                            "updated_at": openapi.Schema(
+                                                type=openapi.TYPE_STRING
+                                            ),
                                         },
                                     ),
                                 ),
@@ -376,7 +414,7 @@ class SearchView(generics.ListAPIView):
             # 分页
             page_size = int(request.query_params.get("size", 10))
             self.pagination_class.page_size = page_size
-            
+
             page = self.paginate_queryset(queryset)
             if page is not None:
                 serializer = self.get_serializer(page, many=True)
@@ -399,7 +437,10 @@ class SearchView(generics.ListAPIView):
             )
 
         except Exception as e:
-            return error_response(code=400, message=str(e))
+            return Response(
+                {"code": 500, "message": "搜索失败"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def _highlight_text(self, text: str, keyword: str) -> str:
         """高亮关键词"""

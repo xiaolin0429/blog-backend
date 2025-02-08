@@ -1,12 +1,14 @@
 import os
+import uuid
 from datetime import datetime
 from typing import BinaryIO, List, Optional
-from urllib.parse import urljoin
 
 from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.paginator import Paginator
+from django.db.models import Q
 
-from minio import Minio
-from minio.error import S3Error
+from .models.storage import FileStorage
 
 
 class FileStorageService:
@@ -66,19 +68,6 @@ class FileStorageService:
     MAX_DOCUMENT_SIZE = 50 * 1024 * 1024  # 50MB
     MAX_MEDIA_SIZE = 200 * 1024 * 1024  # 200MB
 
-    def __init__(self):
-        self.client = Minio(
-            settings.MINIO_ENDPOINT,
-            access_key=settings.MINIO_ACCESS_KEY,
-            secret_key=settings.MINIO_SECRET_KEY,
-            secure=settings.MINIO_SECURE,
-        )
-        self.bucket_name = settings.MINIO_BUCKET_NAME
-
-        # 确保bucket存在
-        if not self.client.bucket_exists(self.bucket_name):
-            self.client.make_bucket(self.bucket_name)
-
     def _get_file_type(self, content_type: str) -> Optional[str]:
         """根据MIME类型判断文件类型"""
         if content_type in self.ALLOWED_IMAGE_TYPES:
@@ -99,29 +88,14 @@ class FileStorageService:
             return False
         return True
 
-    def _generate_file_path(self, original_filename: str, file_type: str) -> str:
-        """生成文件存储路径"""
-        # 获取文件扩展名
-        _, ext = os.path.splitext(original_filename)
-
-        # 生成基于日期的目录结构
-        date_path = datetime.now().strftime("%Y/%m/%d")
-
-        # 生成文件名(时间戳+随机字符串)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        random_str = os.urandom(4).hex()
-        filename = f"{timestamp}_{random_str}{ext}"
-
-        return f"{file_type}/{date_path}/{filename}"
-
     def upload_file(
         self, file: BinaryIO, original_filename: str, content_type: str, file_size: int
     ) -> dict:
         """
-        上传文件
+        上传文件到数据库
         返回: {
             'url': str,      # 文件访问URL
-            'path': str,     # 存储路径
+            'path': str,     # 存储ID
             'name': str,     # 文件名
             'original_name': str,  # 原始文件名
             'type': str,     # 文件类型
@@ -130,134 +104,56 @@ class FileStorageService:
             'upload_time': str # 上传时间
         }
         """
-        # 检查文件类型
-        file_type = self._get_file_type(content_type)
-        if not file_type:
-            raise ValueError("不支持的文件类型")
-
-        # 检查文件大小
-        if not self._check_file_size(file_size, file_type):
-            raise ValueError("文件大小超出限制")
-
-        # 生成存储路径
-        file_path = self._generate_file_path(original_filename, file_type)
-
         try:
-            # 上传文件到MinIO
-            self.client.put_object(
-                bucket_name=self.bucket_name,
-                object_name=file_path,
-                data=file,
-                length=file_size,
-                content_type=content_type,
-            )
+            # 检查文件类型
+            file_type = self._get_file_type(content_type)
+            if not file_type:
+                raise ValueError("不支持的文件类型")
 
-            # 生成访问URL
-            url = self.client.presigned_get_object(
-                bucket_name=self.bucket_name, object_name=file_path
+            # 检查文件大小
+            if not self._check_file_size(file_size, file_type):
+                raise ValueError("文件大小超出限制")
+
+            # 生成文件ID
+            file_id = uuid.uuid4().hex
+
+            # 读取文件内容
+            file_content = file.read()
+
+            # 保存到数据库
+            file_obj = FileStorage.objects.create(
+                file_id=file_id,
+                original_name=original_filename,
+                file_type=file_type,
+                mime_type=content_type,
+                file_size=file_size,
+                file_content=file_content,
             )
 
             return {
-                "url": url,
-                "path": file_path,
-                "name": os.path.basename(file_path),
+                "url": f"/api/v1/storage/files/{file_id}/content",
+                "path": file_id,
+                "name": original_filename,
                 "original_name": original_filename,
                 "type": file_type,
                 "size": file_size,
                 "mime_type": content_type,
-                "upload_time": datetime.now().isoformat(),
+                "upload_time": file_obj.created_at.isoformat(),
             }
 
-        except S3Error as e:
+        except Exception as e:
             raise RuntimeError(f"文件上传失败: {str(e)}")
 
-    def delete_file(self, file_path: str) -> bool:
+    def delete_file(self, file_id: str) -> bool:
         """删除文件"""
         try:
-            self.client.remove_object(
-                bucket_name=self.bucket_name, object_name=file_path
-            )
-            return True
-        except S3Error:
+            file_obj = FileStorage.objects.filter(file_id=file_id).first()
+            if file_obj:
+                file_obj.delete()
+                return True
             return False
-
-    def rename_file(self, old_path: str, new_name: str) -> dict:
-        """
-        重命名文件
-        参数:
-            old_path: 原文件路径
-            new_name: 新文件名（不包含路径和扩展名）
-        返回: 更新后的文件信息
-        """
-        try:
-            # 获取原文件信息
-            try:
-                stat = self.client.stat_object(
-                    bucket_name=self.bucket_name, object_name=old_path
-                )
-            except Exception as e:
-                raise ValueError(f"原文件不存在: {str(e)}")
-
-            # 构建新路径（保持原有的目录结构）
-            dir_path = os.path.dirname(old_path)
-            _, ext = os.path.splitext(old_path)
-            new_path = f"{dir_path}/{new_name}{ext}"
-
-            # 检查新文件名是否已存在
-            try:
-                self.client.stat_object(
-                    bucket_name=self.bucket_name, object_name=new_path
-                )
-                raise RuntimeError("新文件名已存在")
-            except Exception as e:
-                if not str(e).startswith("新文件名已存在"):
-                    pass  # 文件不存在，可以继续重命名
-
-            # 复制文件到新路径
-            try:
-                source_object = f"{self.bucket_name}/{old_path}"
-                self.client.copy_object(
-                    bucket_name=self.bucket_name,
-                    object_name=new_path,
-                    source_bucket_name=self.bucket_name,
-                    source_object_name=old_path,
-                )
-            except Exception as e:
-                raise RuntimeError(f"复制文件失败: {str(e)}")
-
-            # 删除原文件
-            try:
-                self.client.remove_object(
-                    bucket_name=self.bucket_name, object_name=old_path
-                )
-            except Exception as e:
-                # 如果删除原文件失败，尝试删除新文件
-                try:
-                    self.client.remove_object(
-                        bucket_name=self.bucket_name, object_name=new_path
-                    )
-                except:
-                    pass
-                raise RuntimeError(f"删除原文件失败: {str(e)}")
-
-            # 生成新的访问URL
-            url = self.client.presigned_get_object(
-                bucket_name=self.bucket_name, object_name=new_path
-            )
-
-            return {
-                "url": url,
-                "path": new_path,
-                "name": os.path.basename(new_path),
-                "original_name": new_name,
-                "type": old_path.split("/")[0],
-                "size": stat.size,
-                "mime_type": stat.content_type,
-                "upload_time": stat.last_modified.isoformat(),
-            }
-
-        except S3Error as e:
-            raise RuntimeError(f"重命名文件失败: {str(e)}")
+        except Exception:
+            return False
 
     def get_file_list(
         self,
@@ -267,86 +163,90 @@ class FileStorageService:
         page_size: int = 20,
         order_by: str = "-upload_time",
     ) -> dict:
-        """
-        获取文件列表
-        参数:
-            path: 目录路径
-            file_type: 文件类型
-            page: 页码
-            page_size: 每页数量
-            order_by: 排序方式
-                     支持字段：
-                     - name: 按文件名排序
-                     - size: 按文件大小排序
-                     - upload_time: 按上传时间排序
-                     - type: 按文件类型排序
-                     前缀-表示降序，如-upload_time
-        """
+        """获取文件列表"""
         try:
-            # 构建前缀
-            prefix = ""
+            # 构建查询条件
+            query = Q()
             if file_type and file_type != "all":
-                prefix = f"{file_type}/"
-            if path:
-                prefix = os.path.join(prefix, path)
+                query &= Q(file_type=file_type)
 
-            # 获取所有对象
-            objects = self.client.list_objects(
-                bucket_name=self.bucket_name, prefix=prefix, recursive=True
+            # 获取文件列表
+            queryset = FileStorage.objects.filter(query)
+
+            # 排序
+            sort_field = order_by.lstrip("-")
+            if sort_field == "upload_time":
+                sort_field = "created_at"
+            elif sort_field == "name":
+                sort_field = "original_name"
+            queryset = queryset.order_by(
+                f"{'-' if order_by.startswith('-') else ''}{sort_field}"
             )
 
-            # 转换为列表并排序
+            # 分页
+            paginator = Paginator(queryset, page_size)
+            page_obj = paginator.get_page(page)
+
+            # 构建返回数据
             items = []
-            for obj in objects:
-                # 获取文件信息
-                stat = self.client.stat_object(
-                    bucket_name=self.bucket_name, object_name=obj.object_name
-                )
-
-                # 生成访问URL
-                url = self.client.presigned_get_object(
-                    bucket_name=self.bucket_name, object_name=obj.object_name
-                )
-
+            for file_obj in page_obj:
                 items.append(
                     {
-                        "url": url,
-                        "path": obj.object_name,
-                        "name": os.path.basename(obj.object_name),
-                        "type": obj.object_name.split("/")[0],
-                        "size": stat.size,
-                        "mime_type": stat.content_type,
-                        "upload_time": stat.last_modified.isoformat(),
+                        "url": f"/api/v1/storage/files/{file_obj.file_id}/content",
+                        "path": file_obj.file_id,
+                        "name": file_obj.original_name,
+                        "original_name": file_obj.original_name,
+                        "type": file_obj.file_type,
+                        "size": file_obj.file_size,
+                        "mime_type": file_obj.mime_type,
+                        "upload_time": file_obj.created_at.isoformat(),
                     }
                 )
 
-            # 解析排序字段
-            sort_field = order_by.lstrip("-")
-            reverse = order_by.startswith("-")
-
-            # 根据指定字段排序
-            if sort_field == "name":
-                items.sort(key=lambda x: x["name"].lower(), reverse=reverse)
-            elif sort_field == "size":
-                items.sort(key=lambda x: x["size"], reverse=reverse)
-            elif sort_field == "type":
-                items.sort(key=lambda x: x["type"], reverse=reverse)
-            else:  # 默认按上传时间排序
-                items.sort(key=lambda x: x["upload_time"], reverse=reverse)
-
-            # 分页
-            total = len(items)
-            pages = (total + page_size - 1) // page_size
-            start = (page - 1) * page_size
-            end = start + page_size
-
             return {
-                "total": total,
+                "total": paginator.count,
                 "page": page,
                 "size": page_size,
-                "pages": pages,
-                "items": items[start:end],
+                "items": items,
             }
 
-        except S3Error as e:
+        except Exception as e:
             raise RuntimeError(f"获取文件列表失败: {str(e)}")
+
+    def rename_file(self, file_id: str, new_name: str) -> dict:
+        """重命名文件"""
+        try:
+            # 获取文件对象
+            file_obj = FileStorage.objects.filter(file_id=file_id).first()
+            if not file_obj:
+                raise ValueError("原文件不存在")
+
+            # 更新文件名
+            file_obj.original_name = new_name
+            file_obj.save(update_fields=["original_name", "updated_at"])
+
+            return {
+                "url": f"/api/v1/storage/files/{file_obj.file_id}/content",
+                "path": file_obj.file_id,
+                "name": new_name,
+                "original_name": new_name,
+                "type": file_obj.file_type,
+                "size": file_obj.file_size,
+                "mime_type": file_obj.mime_type,
+                "upload_time": file_obj.created_at.isoformat(),
+            }
+
+        except Exception as e:
+            raise RuntimeError(f"重命名文件失败: {str(e)}")
+
+    def get_file_content(self, file_id: str) -> tuple:
+        """获取文件内容"""
+        try:
+            file_obj = FileStorage.objects.filter(file_id=file_id).first()
+            if not file_obj:
+                raise ValueError("文件不存在")
+
+            return file_obj.file_content, file_obj.mime_type
+
+        except Exception as e:
+            raise RuntimeError(f"获取文件内容失败: {str(e)}")

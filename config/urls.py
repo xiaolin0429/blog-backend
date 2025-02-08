@@ -44,7 +44,13 @@ api_v1_patterns = [
     path("user/", include("apps.user.urls")),  # 包含用户应用的所有URLs
     path("", include("apps.post.urls", namespace="post")),  # 使用post应用的主URLs
     path("plugin/", include("apps.plugin.urls")),
-    path("storage/", include("apps.core.urls")),  # 添加文件管理相关的URLs
+    path(
+        "storage/",
+        include(("apps.core.urls", "core-storage"), namespace="core-storage"),
+    ),  # 文件管理URLs
+    path(
+        "", include(("apps.core.urls", "core-statistics"), namespace="core-statistics")
+    ),  # 统计URLs
 ]
 
 urlpatterns = [
