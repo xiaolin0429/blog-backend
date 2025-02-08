@@ -185,7 +185,9 @@ def test_file_content(auth_client):
 def test_file_content_nonexistent(auth_client):
     """测试获取不存在文件的内容"""
     response = auth_client.get("/api/v1/storage/files/nonexistent/content")
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["code"] == 400
+    assert response.data["message"] == "无效的文件ID"
 
 
 def test_upload_media_files(auth_client):
