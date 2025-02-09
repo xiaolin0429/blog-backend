@@ -31,7 +31,7 @@ DJANGO_APPS = [
 ]
 
 # URL设置
-APPEND_SLASH = False  # 禁用自动添加斜杠
+APPEND_SLASH = True  # 默认为True，如果设置为False则不会自动添加斜杠
 
 THIRD_PARTY_APPS = [
     "rest_framework",
