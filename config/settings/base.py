@@ -30,6 +30,9 @@ DJANGO_APPS = [
     "django.contrib.staticfiles",
 ]
 
+# URL设置
+APPEND_SLASH = False  # 禁用自动添加斜杠
+
 THIRD_PARTY_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
@@ -186,6 +189,8 @@ SIMPLE_JWT = {
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
 ]
@@ -236,10 +241,20 @@ LOGGING = {
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "simple",
+            "formatter": "verbose",
+        },
+        "file": {
+            "class": "logging.FileHandler",
+            "filename": "logs/django.log",
+            "formatter": "verbose",
         },
     },
     "loggers": {
+        "apps.user": {  # 为 user 应用配置日志
+            "handlers": ["console", "file"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
         "apps.post": {  # 为 post 应用配置日志
             "handlers": ["console"],
             "level": "DEBUG",

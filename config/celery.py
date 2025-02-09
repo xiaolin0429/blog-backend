@@ -1,31 +1,30 @@
 import os
 
+from django.conf import settings
+
 from celery import Celery
 from celery.schedules import crontab
 
-# Set the default Django settings module for the 'celery' program.
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+# 设置默认的 Django settings module
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 
 app = Celery("blog")
 
-# Using a string here means the worker doesn't have to serialize
-# the configuration object to child processes.
+# 使用 Django 的配置文件配置 Celery
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
-# Load task modules from all registered Django apps.
+# 自动发现任务
 app.autodiscover_tasks()
 
 # 配置定时任务
 app.conf.beat_schedule = {
-    # 其他定时任务...
-    # 每天凌晨3点执行自动保存清理
-    "cleanup-auto-save-versions": {
-        "task": "apps.post.tasks.cleanup_auto_save_versions",
-        "schedule": crontab(hour=3, minute=0),
+    "update-user-statistics": {
+        "task": "apps.core.tasks.update_user_statistics",
+        "schedule": crontab(minute=0, hour=0),  # 每天凌晨执行
     },
 }
 
 
-@app.task(bind=True, ignore_result=True)
+@app.task(bind=True)
 def debug_task(self):
     print(f"Request: {self.request!r}")

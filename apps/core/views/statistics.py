@@ -5,11 +5,12 @@ from django.core.cache import cache
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
 
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.models.statistics import UserStatistics, VisitStatistics
+from apps.core.response import error_response, success_response
 from apps.post.models import Category, Post, Tag
 from apps.post.models.comment import Comment
 
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 class BaseStatisticsView(APIView):
     """统计视图基类，遵循依赖倒转原则"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = []  # 移除权限限制，在具体视图中处理
     cache_timeout = 3600  # 缓存1小时
 
     def get_date_range(self, request):
@@ -46,13 +47,19 @@ class ContentStatisticsView(BaseStatisticsView):
 
     def get(self, request):
         try:
+            # 检查用户权限
+            if not request.user.is_authenticated:
+                return error_response(code=401, message="请先登录")
+            if not request.user.is_staff:
+                return error_response(code=403, message="权限不足，需要管理员权限")
+
             start_date, end_date = self.get_date_range(request)
             cache_key = self.get_cache_key("content_stats", start_date, end_date)
 
             # 尝试从缓存获取数据
             cached_data = cache.get(cache_key)
             if cached_data:
-                return Response(cached_data)
+                return success_response(data=cached_data)
 
             # 文章统计
             posts_data = self._get_posts_statistics(start_date, end_date)
@@ -76,11 +83,10 @@ class ContentStatisticsView(BaseStatisticsView):
 
             # 缓存数据
             cache.set(cache_key, data, self.cache_timeout)
-            return Response(data)
+            return success_response(data=data)
         except Exception as e:
-            # 记录错误日志，但不暴露具体错误信息
             logger.error("获取内容统计数据失败: %s", str(e))
-            return Response({"error": "获取统计数据失败，请稍后重试"}, status=500)
+            return error_response(code=500, message="获取统计数据失败，请稍后重试")
 
     def _get_posts_statistics(self, start_date, end_date):
         """获取文章统计数据"""
@@ -231,13 +237,19 @@ class VisitStatisticsView(BaseStatisticsView):
 
     def get(self, request):
         try:
+            # 检查用户权限
+            if not request.user.is_authenticated:
+                return error_response(code=401, message="请先登录")
+            if not request.user.is_staff:
+                return error_response(code=403, message="权限不足，需要管理员权限")
+
             start_date, end_date = self.get_date_range(request)
             cache_key = self.get_cache_key("visit_stats", start_date, end_date)
 
             # 尝试从缓存获取数据
             cached_data = cache.get(cache_key)
             if cached_data:
-                return Response(cached_data)
+                return success_response(data=cached_data)
 
             # 查询统计数据
             stats = VisitStatistics.objects.filter(
@@ -264,10 +276,10 @@ class VisitStatisticsView(BaseStatisticsView):
 
             # 缓存数据
             cache.set(cache_key, data, self.cache_timeout)
-            return Response(data)
+            return success_response(data=data)
         except Exception as e:
             logger.error("获取访问统计数据失败: %s", str(e))
-            return Response({"error": "获取统计数据失败，请稍后重试"}, status=500)
+            return error_response(code=500, message="获取统计数据失败，请稍后重试")
 
 
 class UserStatisticsView(BaseStatisticsView):
@@ -275,41 +287,34 @@ class UserStatisticsView(BaseStatisticsView):
 
     def get(self, request):
         try:
-            start_date, end_date = self.get_date_range(request)
-            cache_key = self.get_cache_key("user_stats", start_date, end_date)
+            # 检查用户权限
+            if not request.user.is_authenticated:
+                return error_response(code=401, message="请先登录")
+            if not request.user.is_staff:
+                return error_response(code=403, message="权限不足，需要管理员权限")
 
-            # 尝试从缓存获取数据
-            cached_data = cache.get(cache_key)
-            if cached_data:
-                return Response(cached_data)
+            # 获取最新的统计数据
+            from apps.core.tasks import update_user_statistics
 
-            # 查询统计数据
-            stats = UserStatistics.objects.filter(
-                date__range=[start_date, end_date]
-            ).order_by("date")
+            result = update_user_statistics()
 
-            # 准备返回数据
-            last_stat = stats.last()
             data = {
                 "total": {
-                    "total_users": last_stat.total_users if last_stat else 0,
-                    "active_users": sum(s.active_users for s in stats) if stats else 0,
-                    "new_users": sum(s.new_users for s in stats) if stats else 0,
+                    "total_users": result["total_users"],
+                    "active_users": result["active_users"],
+                    "new_users": result["new_users"],
                 },
                 "trends": [
                     {
-                        "date": s.date.strftime("%Y-%m-%d"),
-                        "total_users": s.total_users,
-                        "active_users": s.active_users,
-                        "new_users": s.new_users,
+                        "date": result["date"],
+                        "total_users": result["total_users"],
+                        "active_users": result["active_users"],
+                        "new_users": result["new_users"],
                     }
-                    for s in stats
                 ],
             }
 
-            # 缓存数据
-            cache.set(cache_key, data, self.cache_timeout)
-            return Response(data)
+            return success_response(data=data)
         except Exception as e:
             logger.error("获取用户统计数据失败: %s", str(e))
-            return Response({"error": "获取统计数据失败，请稍后重试"}, status=500)
+            return error_response(code=500, message="获取统计数据失败，请稍后重试")
