@@ -10,6 +10,9 @@ class User(AbstractUser):
     nickname = models.CharField(_("昵称"), max_length=20, blank=True, default="")
     avatar = models.ImageField(_("头像"), upload_to="avatars/", blank=True, null=True)
     bio = models.TextField(_("个人简介"), max_length=500, blank=True, default="")
+    storage_quota = models.BigIntegerField(
+        _("存储配额"), help_text="用户存储配额(字节)", default=1024 * 1024 * 1024  # 1GB
+    )
 
     class Meta:
         verbose_name = _("用户")
