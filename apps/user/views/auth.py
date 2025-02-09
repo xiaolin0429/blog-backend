@@ -1,7 +1,8 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from datetime import timedelta
 
 import pytz
 from drf_yasg import openapi
@@ -41,14 +42,14 @@ class LoginView(TokenObtainPairView):
         },
     )
     def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
         try:
+            serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             user = serializer.user
             tokens = serializer.validated_data
 
             # 处理remember参数
-            remember = request.data.get('remember', False)
+            remember = request.data.get("remember", False)
             if remember:
                 # 如果remember为True，则将access token的有效期设置为30天，refresh token的有效期设置为60天
                 now = timezone.now()
@@ -58,10 +59,7 @@ class LoginView(TokenObtainPairView):
                 access = refresh.access_token
                 access.set_exp(lifetime=timedelta(days=30))
                 access.set_iat(at_time=now)
-                tokens = {
-                    'access': str(access),
-                    'refresh': str(refresh)
-                }
+                tokens = {"access": str(access), "refresh": str(refresh)}
             else:
                 # 默认有效期：access token 24小时，refresh token 7天
                 now = timezone.now()
@@ -71,10 +69,7 @@ class LoginView(TokenObtainPairView):
                 access = refresh.access_token
                 access.set_exp(lifetime=timedelta(hours=24))
                 access.set_iat(at_time=now)
-                tokens = {
-                    'access': str(access),
-                    'refresh': str(refresh)
-                }
+                tokens = {"access": str(access), "refresh": str(refresh)}
 
             # 更新最后登录时间
             user.last_login = timezone.now()
@@ -91,6 +86,14 @@ class LoginView(TokenObtainPairView):
             date_joined = user.date_joined.astimezone(user_tz)
             last_login = user.last_login.astimezone(user_tz)
 
+            # 安全地获取头像URL
+            try:
+                avatar_url = (
+                    user.avatar.url if user.avatar else settings.DEFAULT_AVATAR_URL
+                )
+            except (AttributeError, ValueError):
+                avatar_url = settings.DEFAULT_AVATAR_URL
+
             data = {
                 "refresh": tokens["refresh"],
                 "access": tokens["access"],
@@ -99,9 +102,7 @@ class LoginView(TokenObtainPairView):
                     "username": user.username,
                     "email": user.email,
                     "nickname": getattr(user, "nickname", ""),
-                    "avatar": user.avatar.url
-                    if user.avatar and hasattr(user.avatar, "url")
-                    else settings.DEFAULT_AVATAR_URL,
+                    "avatar": avatar_url,
                     "date_joined": date_joined.strftime("%Y-%m-%d %H:%M:%S"),
                     "last_login": last_login.strftime("%Y-%m-%d %H:%M:%S"),
                 },
