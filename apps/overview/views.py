@@ -53,7 +53,7 @@ def system_overview(request):
     except Exception as e:
         logger.error("获取系统概览信息失败", exc_info=True)
         return Response(
-            {"code": 1, "message": _("获取系统概览信息失败：内部错误")},
+            {"code": 1, "message": _("系统处理请求时发生错误")},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -66,12 +66,16 @@ def system_info(request):
         logger.debug("获取系统信息...")
         data = SystemService.get_system_info()
         if "error" in data:
-            raise Exception(data["error"])
+            logger.error(f"获取系统信息失败: {data['error']}")
+            return Response(
+                {"code": 1, "message": _("系统处理请求时发生错误")},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         return Response({"code": 0, "message": "success", "data": data})
     except Exception as e:
         logger.error("获取系统信息失败", exc_info=True)
         return Response(
-            {"code": 1, "message": _("获取系统信息失败：内部错误")},
+            {"code": 1, "message": _("系统处理请求时发生错误")},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -84,12 +88,16 @@ def content_stats(request):
         logger.debug("获取内容统计...")
         data = SystemService.get_content_stats()
         if "error" in data:
-            raise Exception(data["error"])
+            logger.error(f"获取内容统计失败: {data['error']}")
+            return Response(
+                {"code": 1, "message": _("系统处理请求时发生错误")},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         return Response({"code": 0, "message": "success", "data": data})
     except Exception as e:
         logger.error("获取内容统计失败", exc_info=True)
         return Response(
-            {"code": 1, "message": _("获取内容统计失败：内部错误")},
+            {"code": 1, "message": _("系统处理请求时发生错误")},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -102,11 +110,15 @@ def storage_stats(request):
         logger.debug("获取存储统计...")
         data = SystemService.get_storage_stats()
         if "error" in data:
-            raise Exception(data["error"])
+            logger.error(f"获取存储统计失败: {data['error']}")
+            return Response(
+                {"code": 1, "message": _("系统处理请求时发生错误")},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         return Response({"code": 0, "message": "success", "data": data})
     except Exception as e:
         logger.error("获取存储统计失败", exc_info=True)
         return Response(
-            {"code": 1, "message": _("获取存储统计失败：内部错误")},
+            {"code": 1, "message": _("系统处理请求时发生错误")},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )

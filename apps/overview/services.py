@@ -1,6 +1,7 @@
 import logging
 import os
 import platform
+import time
 from datetime import datetime, timedelta
 
 from django.conf import settings
@@ -38,24 +39,12 @@ class SystemService:
 
             return {
                 "version": getattr(settings, "VERSION", "1.0.0"),
-                "start_time": process.create_time(),
-                "python_version": platform.python_version(),
-                "cpu_usage": {
-                    "percent": cpu_percent,
-                    "cores": psutil.cpu_count(),
-                    "physical_cores": psutil.cpu_count(logical=False),
-                },
-                "memory_usage": {
-                    "percent": memory.percent,
-                    "total": memory.total,
-                    "available": memory.available,
-                    "used": memory.used,
-                },
-                "disk_usage": {
-                    "percent": disk.percent,
-                    "total": disk.total,
-                    "used": disk.used,
-                    "free": disk.free,
+                "status": "running",
+                "uptime": int(time.time() - process.create_time()),
+                "system_load": {
+                    "cpu": min(100, max(0, cpu_percent)),  # 确保CPU使用率在0-100之间
+                    "memory": min(100, max(0, memory.percent)),  # 确保内存使用率在0-100之间
+                    "disk": min(100, max(0, disk.percent)),  # 确保磁盘使用率在0-100之间
                 },
                 "timestamp": timezone.now().timestamp(),
             }
@@ -63,8 +52,7 @@ class SystemService:
             logger.error(f"获取系统信息失败: {str(e)}", exc_info=True)
             return {
                 "version": getattr(settings, "VERSION", "1.0.0"),
-                "python_version": platform.python_version(),
-                "error": str(e),
+                "status": "unknown",
                 "timestamp": timezone.now().timestamp(),
             }
 

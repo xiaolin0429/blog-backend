@@ -19,24 +19,12 @@ GET /api/v1/overview/
     "data": {
         "system_info": {
             "version": "1.0.0",
-            "start_time": 1644451200.0,
-            "python_version": "3.12.0",
-            "cpu_usage": {
-                "percent": 45.6,
-                "cores": 8,
-                "physical_cores": 4
-            },
-            "memory_usage": {
-                "percent": 32.1,
-                "total": 17179869184,
-                "available": 8589934592,
-                "used": 8589934592
-            },
-            "disk_usage": {
-                "percent": 68.9,
-                "total": 1099511627776,
-                "used": 757573918208,
-                "free": 341937709568
+            "status": "running",
+            "uptime": 86400,
+            "system_load": {
+                "cpu": 45.6,
+                "memory": 32.1,
+                "disk": 68.9
             },
             "timestamp": 1644451200.0
         },
@@ -194,22 +182,12 @@ GET /api/v1/overview/storage/
 
 ### 系统信息
 - `version`: 系统版本号
-- `start_time`: 系统启动时间（Unix时间戳）
-- `python_version`: Python版本号
-- `cpu_usage`: CPU使用情况
-  - `percent`: CPU使用率（百分比）
-  - `cores`: CPU总核心数（包括逻辑核心）
-  - `physical_cores`: CPU物理核心数
-- `memory_usage`: 内存使用情况
-  - `percent`: 内存使用率（百分比）
-  - `total`: 总内存大小（字节）
-  - `available`: 可用内存大小（字节）
-  - `used`: 已用内存大小（字节）
-- `disk_usage`: 磁盘使用情况
-  - `percent`: 磁盘使用率（百分比）
-  - `total`: 总磁盘大小（字节）
-  - `used`: 已用磁盘大小（字节）
-  - `free`: 可用磁盘大小（字节）
+- `status`: 系统状态（running: 运行中，unknown: 未知）
+- `uptime`: 系统运行时间（秒）
+- `system_load`: 系统负载情况
+  - `cpu`: CPU使用率（0-100%）
+  - `memory`: 内存使用率（0-100%）
+  - `disk`: 磁盘使用率（0-100%）
 - `timestamp`: 数据获取时间（Unix时间戳）
 
 ### 内容统计
@@ -233,11 +211,28 @@ GET /api/v1/overview/storage/
   - `status_display`: 备份状态显示文本
 - `timestamp`: 数据获取时间（Unix时间戳）
 
+### 最近活动
+- `recent_posts`: 最近文章列表（最多5条）
+  - `id`: 文章ID
+  - `title`: 文章标题
+  - `author`: 作者用户名
+  - `created_at`: 创建时间
+  - `status`: 文章状态
+  - `status_display`: 状态显示文本
+- `recent_backups`: 最近备份列表（最多5条）
+  - `id`: 备份ID
+  - `name`: 备份名称
+  - `created_at`: 创建时间
+  - `status`: 备份状态
+  - `status_display`: 状态显示文本
+- `timestamp`: 数据获取时间（Unix时间戳）
+
 ## 注意事项
 
 1. 所有接口都需要管理员权限
 2. 所有数据都包含 `timestamp` 字段，表示数据的获取时间
 3. 系统信息为实时数据，建议前端定期刷新（推荐间隔：5秒）
-4. 内存和磁盘大小单位均为字节
+4. 存储大小单位为字节
 5. 时间戳格式为Unix时间戳（秒）
-6. 如果获取系统信息失败，会返回基本版本信息和错误信息
+6. 如果获取系统信息失败，会返回基本版本信息和状态信息
+7. 所有百分比数据都已标准化到0-100范围内
