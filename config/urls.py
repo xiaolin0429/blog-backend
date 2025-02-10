@@ -45,6 +45,8 @@ api_v1_patterns = [
     path("", include("apps.post.urls", namespace="post")),  # 使用post应用的主URLs
     path("plugin/", include("apps.plugin.urls")),
     path("", include("apps.core.urls")),  # 包含core应用的所有URLs
+    path("backup/", include("apps.backup.urls")),  # 包含备份应用的URLs，添加backup前缀
+    path("overview/", include("apps.overview.urls")),  # 包含系统概览应用的URLs
 ]
 
 urlpatterns = [

@@ -108,6 +108,7 @@ INSTALLED_APPS = [
     "apps.post.apps.PostConfig",
     "apps.user.apps.UserConfig",
     "apps.plugin.apps.PluginConfig",
+    "apps.backup.apps.BackupConfig",
 ]
 
 # DRF settings
