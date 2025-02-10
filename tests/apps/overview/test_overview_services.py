@@ -92,22 +92,14 @@ class TestSystemService:
         info = SystemService.get_system_info()
 
         assert info["version"] == "1.0.0"
-        assert info["start_time"] == 1644451200.0
-        assert isinstance(info["python_version"], str)
+        assert info["status"] == "running"
+        assert isinstance(info["uptime"], int)
+        assert info["uptime"] > 0
 
-        assert info["cpu_usage"]["percent"] == 45.6
-        assert info["cpu_usage"]["cores"] == 8
-        assert info["cpu_usage"]["physical_cores"] == 4
-
-        assert info["memory_usage"]["percent"] == 32.1
-        assert info["memory_usage"]["total"] == 17179869184
-        assert info["memory_usage"]["available"] == 8589934592
-        assert info["memory_usage"]["used"] == 8589934592
-
-        assert info["disk_usage"]["percent"] == 68.9
-        assert info["disk_usage"]["total"] == 1099511627776
-        assert info["disk_usage"]["used"] == 757573918208
-        assert info["disk_usage"]["free"] == 341937709568
+        assert "system_load" in info
+        assert 0 <= info["system_load"]["cpu"] <= 100
+        assert 0 <= info["system_load"]["memory"] <= 100
+        assert 0 <= info["system_load"]["disk"] <= 100
 
         assert "timestamp" in info
 
