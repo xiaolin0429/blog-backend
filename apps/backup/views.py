@@ -1,3 +1,5 @@
+import logging
+
 from django.http import FileResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -12,6 +14,8 @@ from rest_framework.response import Response
 from .models import Backup, BackupConfig
 from .serializers import BackupConfigSerializer, BackupSerializer
 from .services import BackupService
+
+logger = logging.getLogger(__name__)
 
 
 class BackupViewSet(viewsets.ModelViewSet):
@@ -66,8 +70,9 @@ class BackupViewSet(viewsets.ModelViewSet):
                 }
             )
         except Exception as e:
+            logger.error("Error creating backup: %s", str(e))
             return Response(
-                {"code": 1, "message": _("备份创建失败：%s") % str(e)},
+                {"code": 1, "message": _("备份创建失败")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -79,8 +84,9 @@ class BackupViewSet(viewsets.ModelViewSet):
             BackupService.restore_from_backup(backup)
             return Response({"code": 0, "message": _("恢复成功")})
         except Exception as e:
+            logger.error("Error restoring from backup: %s", str(e))
             return Response(
-                {"code": 1, "message": _("恢复失败：%s") % str(e)},
+                {"code": 1, "message": _("恢复失败")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -101,8 +107,9 @@ class BackupViewSet(viewsets.ModelViewSet):
             ] = f'attachment; filename="{backup.file_path.name}"'
             return response
         except Exception as e:
+            logger.error("Error downloading backup file: %s", str(e))
             return Response(
-                {"code": 1, "message": _("下载失败：%s") % str(e)},
+                {"code": 1, "message": _("下载失败")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -136,7 +143,8 @@ class BackupConfigViewSet(viewsets.ModelViewSet):
                 {"code": 0, "message": _("测试备份已启动"), "data": {"backup_id": backup.id}}
             )
         except Exception as e:
+            logger.error("Error testing backup config: %s", str(e))
             return Response(
-                {"code": 1, "message": _("测试备份失败：%s") % str(e)},
+                {"code": 1, "message": _("测试备份失败")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
