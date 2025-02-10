@@ -43,9 +43,9 @@ def system_overview(request):
         logger.info("系统概览信息获取成功")
         return Response({"code": 0, "message": "success", "data": data})
     except Exception as e:
-        logger.error(f"获取系统概览信息失败: {str(e)}", exc_info=True)
+        logger.error("获取系统概览信息失败", exc_info=True)
         return Response(
-            {"code": 1, "message": f"获取系统概览信息失败: {str(e)}"},
+            {"code": 1, "message": _("获取系统概览信息失败：内部错误")},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -59,9 +59,10 @@ def system_info(request):
         data = SystemService.get_system_info()
         return Response({"code": 0, "message": "success", "data": data})
     except Exception as e:
-        logger.error(f"获取系统信息失败: {str(e)}", exc_info=True)
+        logger.error("获取系统信息失败", exc_info=True)
         return Response(
-            {"code": 1, "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"code": 1, "message": _("获取系统信息失败：内部错误")},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
@@ -74,9 +75,10 @@ def content_stats(request):
         data = SystemService.get_content_stats()
         return Response({"code": 0, "message": "success", "data": data})
     except Exception as e:
-        logger.error(f"获取内容统计失败: {str(e)}", exc_info=True)
+        logger.error("获取内容统计失败", exc_info=True)
         return Response(
-            {"code": 1, "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"code": 1, "message": _("获取内容统计失败：内部错误")},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
@@ -89,7 +91,8 @@ def storage_stats(request):
         data = SystemService.get_storage_stats()
         return Response({"code": 0, "message": "success", "data": data})
     except Exception as e:
-        logger.error(f"获取存储统计失败: {str(e)}", exc_info=True)
+        logger.error("获取存储统计失败", exc_info=True)
         return Response(
-            {"code": 1, "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"code": 1, "message": _("获取存储统计失败：内部错误")},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
