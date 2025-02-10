@@ -49,6 +49,7 @@ LOCAL_APPS = [
     "apps.user.apps.UserConfig",
     "apps.post.apps.PostConfig",
     "apps.plugin.apps.PluginConfig",
+    "apps.backup.apps.BackupConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -260,6 +261,11 @@ LOGGING = {
             "level": "DEBUG",
             "propagate": True,
         },
+        "apps.overview": {  # 为 overview 应用配置日志
+            "handlers": ["console", "file"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
     },
     "root": {
         "handlers": ["console"],
@@ -269,3 +275,15 @@ LOGGING = {
 
 # 存储后端配置
 STORAGE_BACKEND = "database"  # 可选值: database, minio, oss等
+
+# Backup settings
+MAX_AUTO_BACKUPS = int(os.getenv("MAX_AUTO_BACKUPS", "5"))  # 保留的自动备份数量
+BACKUP_RETENTION_DAYS = int(os.getenv("BACKUP_RETENTION_DAYS", "30"))  # 备份保留天数
+
+# Celery Beat Schedule
+CELERY_BEAT_SCHEDULE = {
+    "create_auto_backup": {
+        "task": "apps.backup.tasks.create_auto_backup",
+        "schedule": timedelta(days=1),  # 每天执行一次
+    },
+}
