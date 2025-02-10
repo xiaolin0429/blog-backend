@@ -24,15 +24,23 @@ def system_overview(request):
 
         logger.debug("获取系统信息...")
         system_info = SystemService.get_system_info()
+        if "error" in system_info:
+            raise Exception(system_info["error"])
 
         logger.debug("获取内容统计...")
         content_stats = SystemService.get_content_stats()
+        if "error" in content_stats:
+            raise Exception(content_stats["error"])
 
         logger.debug("获取存储统计...")
         storage_stats = SystemService.get_storage_stats()
+        if "error" in storage_stats:
+            raise Exception(storage_stats["error"])
 
         logger.debug("获取最近活动...")
         recent_activities = SystemService.get_recent_activities()
+        if "error" in recent_activities:
+            raise Exception(recent_activities["error"])
 
         data = {
             "system_info": system_info,
@@ -57,6 +65,8 @@ def system_info(request):
     try:
         logger.debug("获取系统信息...")
         data = SystemService.get_system_info()
+        if "error" in data:
+            raise Exception(data["error"])
         return Response({"code": 0, "message": "success", "data": data})
     except Exception as e:
         logger.error("获取系统信息失败", exc_info=True)
@@ -73,6 +83,8 @@ def content_stats(request):
     try:
         logger.debug("获取内容统计...")
         data = SystemService.get_content_stats()
+        if "error" in data:
+            raise Exception(data["error"])
         return Response({"code": 0, "message": "success", "data": data})
     except Exception as e:
         logger.error("获取内容统计失败", exc_info=True)
@@ -89,6 +101,8 @@ def storage_stats(request):
     try:
         logger.debug("获取存储统计...")
         data = SystemService.get_storage_stats()
+        if "error" in data:
+            raise Exception(data["error"])
         return Response({"code": 0, "message": "success", "data": data})
     except Exception as e:
         logger.error("获取存储统计失败", exc_info=True)
