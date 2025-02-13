@@ -28,6 +28,10 @@ class BackupService:
             "post.Category",
             "post.Tag",
         ],
+        Backup.BackupType.FILES: [
+            "post.Post",  # 为了获取文章中的媒体文件引用
+            "user.User",  # 为了获取用户头像等媒体文件引用
+        ],
         Backup.BackupType.SETTINGS: [
             "backup.BackupConfig",
         ],

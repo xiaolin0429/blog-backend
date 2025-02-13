@@ -34,9 +34,22 @@ class BackupViewSet(viewsets.ModelViewSet):
     ordering = ["-created_at"]
 
     def perform_create(self, serializer):
-        backup = serializer.save(created_by=self.request.user)
-        backup.file_size = backup.file_path.size if backup.file_path else 0
-        backup.save()
+        # 获取请求数据
+        name = serializer.validated_data.get("name")
+        backup_type = serializer.validated_data.get("backup_type")
+        description = serializer.validated_data.get("description", "")
+
+        try:
+            # 创建备份（包括数据库和媒体文件）
+            backup = BackupService.create_backup(
+                name=name,
+                backup_type=backup_type,
+                description=description,
+                user=self.request.user,
+            )
+        except Exception as e:
+            logger.error("Error creating backup: %s", str(e))
+            raise
 
     @action(detail=False, methods=["post"])
     def create_full_backup(self, request):
