@@ -128,9 +128,30 @@ class UserManagementViewSet(ModelViewSet):
             return success_response(
                 message="创建用户成功", data=UserDetailSerializer(user).data
             )
+        except serializers.ValidationError as e:
+            logger.error(f"创建用户数据验证失败: {str(e)}")
+            # 处理密码相关的错误
+            if "password" in e.detail:
+                error_messages = []
+                for error in e.detail["password"]:
+                    if error.code == "password_too_common":
+                        error_messages.append("密码太常见，请使用更复杂的密码")
+                    elif error.code == "password_too_short":
+                        error_messages.append("密码太短，请至少使用8个字符")
+                    elif error.code == "password_too_similar":
+                        error_messages.append("密码与用户名太相似")
+                    elif error.code == "password_entirely_numeric":
+                        error_messages.append("密码不能全是数字")
+                    else:
+                        error_messages.append(str(error))
+                return error_response(
+                    code=400, message="密码验证失败", data={"password": error_messages}
+                )
+            # 处理其他字段的错误
+            return error_response(code=400, message="创建用户失败", data={"errors": e.detail})
         except Exception as e:
             logger.error(f"创建用户失败: {str(e)}")
-            return error_response(code=500, message="创建用户失败")
+            return error_response(code=500, message=f"创建用户失败: {str(e)}")
 
     def update(self, request, *args, **kwargs):
         """更新用户信息"""

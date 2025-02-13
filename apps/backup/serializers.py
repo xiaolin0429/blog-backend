@@ -33,6 +33,7 @@ class BackupSerializer(serializers.ModelSerializer):
             "created_by_name",
         ]
         read_only_fields = [
+            "file_path",
             "file_size",
             "status",
             "error_message",
