@@ -30,6 +30,7 @@ class Post(models.Model):
     status = models.CharField(
         _("状态"), max_length=10, choices=STATUS_CHOICES, default="draft"
     )
+    cover = models.CharField(_("封面图"), max_length=500, blank=True, null=True)
     pinned = models.BooleanField(_("是否置顶"), default=False)
     allow_comment = models.BooleanField(_("允许评论"), default=True)
     views = models.PositiveIntegerField(_("浏览量"), default=0)

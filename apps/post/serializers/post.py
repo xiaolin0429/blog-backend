@@ -64,6 +64,7 @@ class PostDetailSerializer(TimezoneSerializerMixin, serializers.ModelSerializer)
             "tags",
             "status",
             "comments",
+            "cover",
             "created_at",
             "updated_at",
             "published_at",
@@ -107,6 +108,7 @@ class PostCreateUpdateSerializer(TimezoneSerializerMixin, serializers.ModelSeria
             "published_at",
             "author",
             "author_username",
+            "cover",
         ]
         read_only_fields = ["created_at", "updated_at", "author", "author_username"]
         extra_kwargs = {
