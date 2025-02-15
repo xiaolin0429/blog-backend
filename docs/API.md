@@ -171,6 +171,18 @@
     - 路径格式错误
     - 路径超出允许长度
     - 路径包含非法字符
+  - 6010: 图片处理失败
+    - 图片格式转换失败
+    - 图片压缩失败
+    - 图片裁剪失败
+    - 图片旋转失败
+  - 6011: 图片分辨率超出限制
+    - 图片宽度超过限制（最大8192像素）
+    - 图片高度超过限制（最大8192像素）
+  - 6012: 图片质量不符合要求
+    - 图片分辨率过低
+    - 图片质量过低
+    - 图片包含不当内容
 
 - **系统相关（9000-9999）**
   - 9001: 系统维护中
@@ -2481,3 +2493,113 @@
   - 403: 无权限修改文件
   - 404: 文件不存在
   - 409: 新文件名已存在
+
+### 文章相关接口
+
+#### 创建文章
+- **请求参数**
+```json
+{
+    "title": "string",       // 文章标题（必填，2-100字符）
+    "content": "string",     // 文章内容（必填）
+    "excerpt": "string",     // 文章摘要（可选）
+    "category_id": number,   // 分类ID（必填）
+    "tag_ids": [number],    // 标签ID列表（可选）
+    "status": "string",     // 文章状态（可选，默认draft）：draft-草稿，published-已发布，archived-已归档
+    "cover": "string",      // 封面图片URL（可选，最大长度500字符）
+    "pinned": boolean,      // 是否置顶（可选，默认false）
+    "allowComment": boolean // 是否允许评论（可选，默认true）
+}
+```
+
+#### 更新文章
+- **请求参数**
+```json
+{
+    "title": "string",       // 文章标题（可选，2-100字符）
+    "content": "string",     // 文章内容（可选）
+    "excerpt": "string",     // 文章摘要（可选）
+    "category_id": number,   // 分类ID（可选）
+    "tag_ids": [number],    // 标签ID列表（可选）
+    "status": "string",     // 文章状态（可选）：draft-草稿，published-已发布，archived-已归档
+    "cover": "string",      // 封面图片URL（可选，最大长度500字符）
+    "pinned": boolean,      // 是否置顶（可选）
+    "allowComment": boolean // 是否允许评论（可选）
+}
+```
+
+#### 获取文章详情
+- **响应数据**
+```json
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "id": number,           // 文章ID
+        "title": "string",      // 文章标题
+        "content": "string",    // 文章内容
+        "excerpt": "string",    // 文章摘要
+        "author": number,       // 作者ID
+        "author_username": "string", // 作者用户名
+        "category": {           // 分类信息
+            "id": number,
+            "name": "string",
+            "description": "string"
+        },
+        "tags": [{             // 标签列表
+            "id": number,
+            "name": "string",
+            "description": "string"
+        }],
+        "status": "string",    // 文章状态
+        "cover": "string",     // 封面图片URL
+        "pinned": boolean,     // 是否置顶
+        "allowComment": boolean, // 是否允许评论
+        "comments": [],        // 评论列表
+        "created_at": "string", // 创建时间
+        "updated_at": "string", // 更新时间
+        "published_at": "string" // 发布时间
+    },
+    "timestamp": "string",
+    "requestId": "string"
+}
+```
+
+#### 获取文章列表
+- **响应数据**
+```json
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "total": number,     // 总数
+        "items": [{         // 文章列表
+            "id": number,           // 文章ID
+            "title": "string",      // 文章标题
+            "excerpt": "string",    // 文章摘要
+            "author": number,       // 作者ID
+            "author_username": "string", // 作者用户名
+            "category": {           // 分类信息
+                "id": number,
+                "name": "string"
+            },
+            "category_name": "string", // 分类名称
+            "tags": [{             // 标签列表
+                "id": number,
+                "name": "string"
+            }],
+            "status": "string",    // 文章状态
+            "cover": "string",     // 封面图片URL
+            "comments_count": number, // 评论数量
+            "created_at": "string",  // 创建时间
+            "updated_at": "string",  // 更新时间
+            "published_at": "string" // 发布时间
+        }],
+        "page": number,      // 当前页码
+        "size": number,      // 每页数量
+        "pages": number      // 总页数
+    },
+    "timestamp": "string",
+    "requestId": "string"
+}
+```

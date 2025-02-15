@@ -56,10 +56,11 @@ class ContentStatisticsView(BaseStatisticsView):
             start_date, end_date = self.get_date_range(request)
             cache_key = self.get_cache_key("content_stats", start_date, end_date)
 
-            # 尝试从缓存获取数据
-            cached_data = cache.get(cache_key)
-            if cached_data:
-                return success_response(data=cached_data)
+            # 开发环境下禁用缓存
+            cached_data = None
+            # cached_data = cache.get(cache_key)
+            # if cached_data:
+            #     return success_response(data=cached_data)
 
             # 文章统计
             posts_data = self._get_posts_statistics(start_date, end_date)
@@ -82,7 +83,7 @@ class ContentStatisticsView(BaseStatisticsView):
             }
 
             # 缓存数据
-            cache.set(cache_key, data, self.cache_timeout)
+            # cache.set(cache_key, data, self.cache_timeout)
             return success_response(data=data)
         except Exception as e:
             logger.error("获取内容统计数据失败: %s", str(e))
@@ -92,9 +93,7 @@ class ContentStatisticsView(BaseStatisticsView):
         """获取文章统计数据"""
         try:
             # 基础查询集
-            posts = Post.objects.filter(
-                created_at__date__range=[start_date, end_date], is_deleted=False
-            )
+            posts = Post.objects.filter(is_deleted=False)
 
             # 按状态统计
             total = posts.count()
@@ -109,10 +108,10 @@ class ContentStatisticsView(BaseStatisticsView):
                 draft = 0
                 private = 0
 
-            # 热门作者
+            # 热门作者（只统计未删除的文章）
             top_authors = (
                 Post.objects.filter(is_deleted=False)
-                .values("author_id", "author__username")
+                .values("author", "author__username")
                 .annotate(post_count=Count("id"))
                 .order_by("-post_count")[:10]
             )
@@ -124,7 +123,7 @@ class ContentStatisticsView(BaseStatisticsView):
                 "private": private,
                 "topAuthors": [
                     {
-                        "id": author["author_id"],
+                        "id": author["author"],
                         "username": author["author__username"],
                         "postCount": author["post_count"],
                     }

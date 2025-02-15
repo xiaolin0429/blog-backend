@@ -154,6 +154,9 @@
 | category_id | integer | 是 | 分类ID | 1 |
 | tag_ids | array | 否 | 标签ID列表 | [1, 2] |
 | status | string | 否 | 文章状态，默认draft | "draft" |
+| cover | string | 否 | 封面图片URL，最大长度500 | "/uploads/cover.jpg" |
+| pinned | boolean | 否 | 是否置顶，默认false | false |
+| allowComment | boolean | 否 | 是否允许评论，默认true | true |
 
 ### 响应数据
 ```json
@@ -176,6 +179,7 @@
             }
         ],
         "status": "string",
+        "cover": "string",
         "created_at": "string"
     },
     "timestamp": "string",
