@@ -86,6 +86,7 @@ def test_data(django_user_model):
 
 
 @pytest.mark.django_db
+@pytest.mark.overview
 class TestSystemService:
     def test_get_system_info(self, mock_psutil):
         """测试获取系统信息"""

@@ -10,6 +10,7 @@ from apps.post.models import Tag
 @allure.epic("标签管理")
 @allure.feature("标签API")
 @pytest.mark.django_db
+@pytest.mark.tag
 class TestTagViews:
     @allure.story("标签列表")
     @allure.severity(allure.severity_level.CRITICAL)
@@ -19,7 +20,7 @@ class TestTagViews:
         with allure.step("发送获取标签列表请求"):
             url = reverse("post:tag_list")
             response = auth_client.get(url)
-        
+
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -34,7 +35,7 @@ class TestTagViews:
         """测试未认证用户获取标签列表"""
         with allure.step("发送获取标签列表请求"):
             response = api_client.get(reverse("post:tag_list"))
-        
+
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -48,7 +49,7 @@ class TestTagViews:
         with allure.step("发送标签搜索请求"):
             url = reverse("post:tag_list")
             response = auth_client.get(f"{url}?search={tag.name}")
-        
+
         with allure.step("验证搜索结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -65,7 +66,7 @@ class TestTagViews:
             url = reverse("post:tag_list")
             data = {"name": "Test Tag", "description": "Test Description"}
             response = auth_client.post(url, data)
-        
+
         with allure.step("验证创建结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -81,7 +82,7 @@ class TestTagViews:
             url = reverse("post:tag_list")
             data = {"name": ""}
             response = auth_client.post(url, data)
-        
+
         with allure.step("验证错误响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 400
@@ -116,7 +117,7 @@ class TestTagViews:
             url = reverse("post:tag_list")
             data = {"name": tag.name}
             response = auth_client.post(url, data)
-        
+
         with allure.step("验证错误响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 409
@@ -131,7 +132,7 @@ class TestTagViews:
             url = reverse("post:tag_detail", kwargs={"pk": tag.id})
             data = {"name": "Updated Tag", "description": "Updated Description"}
             response = auth_client.put(url, data)
-        
+
         with allure.step("验证更新结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -147,7 +148,7 @@ class TestTagViews:
             url = reverse("post:tag_detail", kwargs={"pk": 999})
             data = {"name": "Updated Tag", "description": "Updated Description"}
             response = auth_client.put(url, data)
-        
+
         with allure.step("验证错误响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 404
@@ -161,7 +162,7 @@ class TestTagViews:
         with allure.step("发送删除标签请求"):
             url = reverse("post:tag_detail", kwargs={"pk": tag.id})
             response = auth_client.delete(url)
-        
+
         with allure.step("验证删除结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -175,7 +176,7 @@ class TestTagViews:
         with allure.step("发送删除不存在标签的请求"):
             url = reverse("post:tag_detail", kwargs={"pk": 999})
             response = auth_client.delete(url)
-        
+
         with allure.step("验证错误响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 404
@@ -194,7 +195,7 @@ class TestTagViews:
                 {"name": "Tag 3", "description": "Description 3"},
             ]
             response = auth_client.post(url, data, format="json")
-        
+
         with allure.step("验证创建结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -216,7 +217,7 @@ class TestTagViews:
                 {"name": "a" * 51, "description": "Description 3"},
             ]
             response = auth_client.post(url, data, format="json")
-        
+
         with allure.step("验证错误响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 400
@@ -277,7 +278,7 @@ class TestTagViews:
             url = reverse("post:tag_list")
             data = {"name": "Test Tag"}
             response = client.post(url, data)
-        
+
         with allure.step("验证权限错误"):
             assert response.status_code == status.HTTP_403_FORBIDDEN
             assert "您没有执行该操作的权限" in str(response.data["detail"])
@@ -291,7 +292,7 @@ class TestTagViews:
         with allure.step("发送获取标签详情请求"):
             url = reverse("post:tag_detail", kwargs={"pk": tag.id})
             response = auth_client.get(url)
-        
+
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -310,7 +311,7 @@ class TestTagViews:
             url = reverse("post:tag_detail", kwargs={"pk": other_tag.id})
             data = {"name": tag.name}  # 使用已存在的标签名称
             response = auth_client.put(url, data)
-        
+
         with allure.step("验证错误响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 409
@@ -326,7 +327,7 @@ class TestTagViews:
             url = reverse("post:tag_detail", kwargs={"pk": tag.id})
             data = {"name": "Updated Tag"}
             response = client.put(url, data)
-        
+
         with allure.step("验证权限错误"):
             assert response.status_code == status.HTTP_403_FORBIDDEN
             assert "您没有执行该操作的权限" in str(response.data["detail"])
@@ -340,7 +341,7 @@ class TestTagViews:
         with allure.step("发送未认证的删除请求"):
             url = reverse("post:tag_detail", kwargs={"pk": tag.id})
             response = client.delete(url)
-        
+
         with allure.step("验证权限错误"):
             assert response.status_code == status.HTTP_403_FORBIDDEN
             assert "您没有执行该操作的权限" in str(response.data["detail"])
@@ -359,7 +360,7 @@ class TestTagViews:
                 {"name": "New Tag 2"},
             ]
             response = auth_client.post(url, data, format="json")
-        
+
         with allure.step("验证错误响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 409
@@ -376,7 +377,7 @@ class TestTagViews:
             response = api_client.post(
                 reverse("post:tag_batch_create"), data=data, format="json"
             )
-        
+
         with allure.step("验证权限错误"):
             assert response.status_code == status.HTTP_401_UNAUTHORIZED
             assert "detail" in response.data

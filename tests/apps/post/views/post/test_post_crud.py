@@ -1,6 +1,6 @@
-import allure
 from django.urls import reverse
 
+import allure
 import pytest
 from rest_framework import status
 
@@ -11,6 +11,7 @@ from tests.apps.post.factories import PostFactory, UserFactory
 @allure.epic("文章管理")
 @allure.feature("文章CRUD")
 @pytest.mark.django_db
+@pytest.mark.post
 class TestPostCRUD:
     @allure.story("创建文章")
     @allure.severity(allure.severity_level.CRITICAL)
@@ -24,10 +25,10 @@ class TestPostCRUD:
                 "content": "Test content",
                 "status": "published",  # 设置为已发布状态
             }
-        
+
         with allure.step("发送创建文章请求"):
             response = auth_client.post(url, data)
-        
+
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -42,10 +43,10 @@ class TestPostCRUD:
         with allure.step("准备创建文章数据"):
             url = reverse("post:post_list")
             data = {"title": "Test Post", "content": "Test content"}
-        
+
         with allure.step("发送创建文章请求"):
             response = client.post(url, data)
-        
+
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -62,7 +63,7 @@ class TestPostCRUD:
         with allure.step("发送获取文章请求"):
             url = reverse("post:post_detail", kwargs={"pk": post.id})
             response = auth_client.get(url)
-        
+
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -77,10 +78,10 @@ class TestPostCRUD:
         with allure.step("准备更新数据"):
             url = reverse("post:post_detail", kwargs={"pk": post.id})
             data = {"title": "Updated Title", "content": "Updated content"}
-        
+
         with allure.step("发送更新请求"):
             response = auth_client.put(url, data)
-        
+
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -95,10 +96,10 @@ class TestPostCRUD:
         with allure.step("准备更新数据"):
             url = reverse("post:post_detail", kwargs={"pk": 999})
             data = {"title": "Updated Title", "content": "Updated content"}
-        
+
         with allure.step("发送更新请求"):
             response = auth_client.put(url, data)
-        
+
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 400  # 更新失败返回400
@@ -112,7 +113,7 @@ class TestPostCRUD:
         with allure.step("发送删除请求"):
             url = reverse("post:post_detail", kwargs={"pk": post.id})
             response = auth_client.delete(url)
-        
+
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -128,7 +129,7 @@ class TestPostCRUD:
         with allure.step("发送删除请求"):
             url = reverse("post:post_detail", kwargs={"pk": 999})
             response = auth_client.delete(url)
-        
+
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 404
@@ -147,7 +148,7 @@ class TestPostCRUD:
         with allure.step("发送获取详情请求"):
             url = reverse("post:post_detail", kwargs={"pk": post.id})
             response = auth_client.get(url)
-        
+
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -162,10 +163,10 @@ class TestPostCRUD:
         with allure.step("准备更新数据"):
             url = reverse("post:post_detail", kwargs={"pk": other_post.id})
             data = {"title": "Updated Title", "content": "Updated content"}
-        
+
         with allure.step("发送更新请求"):
             response = auth_client.put(url, data)
-        
+
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 400  # 更新失败返回400
@@ -179,7 +180,7 @@ class TestPostCRUD:
         with allure.step("发送删除请求"):
             url = reverse("post:post_detail", kwargs={"pk": other_post.id})
             response = auth_client.delete(url)
-        
+
         with allure.step("验证响应结果"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 404  # 无权限返回404
