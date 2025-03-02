@@ -1,0 +1,1 @@
+[{"values":["3.12.9"],"name":"Python.Version"},{"values":["4.2.18"],"name":"Django.Version"},{"values":["3.15.2"],"name":"DRF.Version"},{"values":["macOS"],"name":"OS"},{"values":["pytest"],"name":"Runner"}]

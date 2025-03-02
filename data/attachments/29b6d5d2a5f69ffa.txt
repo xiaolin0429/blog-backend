@@ -1,0 +1,5 @@
+
+Access token payload: {'token_type': 'access', 'exp': 1743521097, 'iat': 1740929097, 'jti': '714d228fb144472b8b99b43a5ded1661', 'user_id': 234}
+Refresh token payload: {'token_type': 'refresh', 'exp': 1746113097, 'iat': 1740929097, 'jti': 'af5cae529d0a42e7bd81a449e1166311', 'user_id': 234}
+Access token lifetime (days): 30.0
+Refresh token lifetime (days): 60.0
