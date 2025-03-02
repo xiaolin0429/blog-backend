@@ -1,0 +1,28 @@
+categories:
+  - name: "用户管理"
+    messageRegex: ".*user.*"
+    matchedStatuses: [failed, broken, passed, skipped]
+  - name: "文章管理"
+    messageRegex: ".*post.*"
+    matchedStatuses: [failed, broken, passed, skipped]
+  - name: "评论管理"
+    messageRegex: ".*comment.*"
+    matchedStatuses: [failed, broken, passed, skipped]
+  - name: "分类管理"
+    messageRegex: ".*category.*"
+    matchedStatuses: [failed, broken, passed, skipped]
+  - name: "标签管理"
+    messageRegex: ".*tag.*"
+    matchedStatuses: [failed, broken, passed, skipped]
+  - name: "插件管理"
+    messageRegex: ".*plugin.*"
+    matchedStatuses: [failed, broken, passed, skipped]
+  - name: "备份管理"
+    messageRegex: ".*backup.*"
+    matchedStatuses: [failed, broken, passed, skipped]
+  - name: "核心功能"
+    messageRegex: ".*core.*"
+    matchedStatuses: [failed, broken, passed, skipped]
+  - name: "系统概览"
+    messageRegex: ".*overview.*"
+    matchedStatuses: [failed, broken, passed, skipped]

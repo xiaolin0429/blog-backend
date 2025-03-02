@@ -102,6 +102,7 @@ def mock_file_operations():
 
 
 @pytest.mark.django_db
+@pytest.mark.backup
 class TestBackupService:
     def test_create_backup(self, test_data, mock_file_operations):
         """测试创建备份"""

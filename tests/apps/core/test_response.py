@@ -17,6 +17,7 @@ from apps.core.response import (
 @allure.epic("核心功能")
 @allure.feature("API响应")
 @pytest.mark.unit
+@pytest.mark.core
 class TestAPIResponse(TestCase):
     @allure.story("响应结构")
     @allure.severity(allure.severity_level.BLOCKER)
@@ -26,7 +27,7 @@ class TestAPIResponse(TestCase):
         """测试响应结构"""
         with allure.step("创建成功响应"):
             response = success_response(data={"key": "value"})
-        
+
         with allure.step("验证响应包含所有必需字段"):
             self.assertIn("code", response.data)
             self.assertIn("message", response.data)
@@ -42,7 +43,7 @@ class TestAPIResponse(TestCase):
         """测试自定义值"""
         with allure.step("创建带自定义消息的响应"):
             response = success_response(data={"key": "value"}, message="custom message")
-        
+
         with allure.step("验证响应状态码和内容"):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data["code"], 200)
@@ -57,7 +58,7 @@ class TestAPIResponse(TestCase):
         """测试成功响应"""
         with allure.step("创建标准成功响应"):
             response = success_response(data={"key": "value"})
-        
+
         with allure.step("验证响应内容"):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data["code"], 200)
@@ -72,7 +73,7 @@ class TestAPIResponse(TestCase):
         """测试创建成功响应"""
         with allure.step("创建资源成功响应"):
             response = created_response(data={"id": 1})
-        
+
         with allure.step("验证响应内容"):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data["code"], 200)
@@ -89,7 +90,7 @@ class TestAPIResponse(TestCase):
             response = error_response(
                 code=400, message="error message", data={"error": "details"}
             )
-        
+
         with allure.step("验证响应内容"):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data["code"], 400)
@@ -104,7 +105,7 @@ class TestAPIResponse(TestCase):
         """测试时间戳格式"""
         with allure.step("创建响应并获取时间戳"):
             response = success_response()
-        
+
         with allure.step("验证时间戳格式"):
             self.assertRegex(
                 response.data["timestamp"],
@@ -119,7 +120,7 @@ class TestAPIResponse(TestCase):
         """测试请求ID格式"""
         with allure.step("创建响应并获取请求ID"):
             response = success_response()
-        
+
         with allure.step("验证请求ID格式"):
             self.assertRegex(
                 response.data["requestId"],
@@ -134,7 +135,7 @@ class TestAPIResponse(TestCase):
         """测试不带数据的错误响应"""
         with allure.step("创建不带数据的错误响应"):
             response = error_response(code=404, message="Not found")
-        
+
         with allure.step("验证响应内容"):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data["code"], 404)
@@ -149,7 +150,7 @@ class TestAPIResponse(TestCase):
         """测试不带数据的成功响应"""
         with allure.step("创建不带数据的成功响应"):
             response = success_response(message="Operation successful")
-        
+
         with allure.step("验证响应内容"):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data["code"], 200)
@@ -167,12 +168,14 @@ class TestAPIResponse(TestCase):
                 "field1": ["This field is required."],
                 "field2": ["Invalid value."],
             }
-        
+
         with allure.step("创建带验证错误的错误响应"):
             response = error_response(
-                code=400, message="Validation failed", data={"errors": validation_errors}
+                code=400,
+                message="Validation failed",
+                data={"errors": validation_errors},
             )
-        
+
         with allure.step("验证响应内容"):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data["code"], 400)
@@ -188,7 +191,7 @@ class TestAPIResponse(TestCase):
         with allure.step("创建响应并获取时间戳"):
             response = APIResponse()
             timestamp = response.data["timestamp"]
-        
+
         with allure.step("验证时间戳是否为ISO格式"):
             try:
                 timezone.datetime.fromisoformat(timestamp)
@@ -204,10 +207,11 @@ class TestAPIResponse(TestCase):
         with allure.step("创建响应并获取请求ID"):
             response = APIResponse()
             request_id = response.data["requestId"]
-        
+
         with allure.step("验证请求ID是否为有效的UUID"):
             try:
                 import uuid
+
                 uuid.UUID(request_id)
             except ValueError:
                 pytest.fail("RequestId is not a valid UUID")

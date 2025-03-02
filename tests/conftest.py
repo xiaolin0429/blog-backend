@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model
 import pytest
 from rest_framework.test import APIClient
 
+# 导入Allure钩子
+from tests.allure_hooks import *
 from tests.apps.post.factories import CommentFactory, PostFactory, UserFactory
 
 User = get_user_model()

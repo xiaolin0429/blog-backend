@@ -1,0 +1,47 @@
+[
+  {
+    "name": "用户管理",
+    "matchedStatuses": ["failed", "broken", "passed", "skipped"],
+    "traceRegex": ".*user.*"
+  },
+  {
+    "name": "文章管理",
+    "matchedStatuses": ["failed", "broken", "passed", "skipped"],
+    "traceRegex": ".*post.*"
+  },
+  {
+    "name": "评论管理",
+    "matchedStatuses": ["failed", "broken", "passed", "skipped"],
+    "traceRegex": ".*comment.*"
+  },
+  {
+    "name": "分类管理",
+    "matchedStatuses": ["failed", "broken", "passed", "skipped"],
+    "traceRegex": ".*category.*"
+  },
+  {
+    "name": "标签管理",
+    "matchedStatuses": ["failed", "broken", "passed", "skipped"],
+    "traceRegex": ".*tag.*"
+  },
+  {
+    "name": "插件管理",
+    "matchedStatuses": ["failed", "broken", "passed", "skipped"],
+    "traceRegex": ".*plugin.*"
+  },
+  {
+    "name": "备份管理",
+    "matchedStatuses": ["failed", "broken", "passed", "skipped"],
+    "traceRegex": ".*backup.*"
+  },
+  {
+    "name": "核心功能",
+    "matchedStatuses": ["failed", "broken", "passed", "skipped"],
+    "traceRegex": ".*core.*"
+  },
+  {
+    "name": "系统概览",
+    "matchedStatuses": ["failed", "broken", "passed", "skipped"],
+    "traceRegex": ".*overview.*"
+  }
+]

@@ -1,17 +1,17 @@
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
 
 import pytest
 import pytz
+from jwt import decode
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
-from jwt import decode
-from django.conf import settings
 
 User = get_user_model()
 
@@ -42,6 +42,7 @@ def change_password_url():
 
 @pytest.mark.django_db
 @pytest.mark.integration
+@pytest.mark.user
 class TestAuthViews:
     @pytest.fixture
     def api_client(self):
@@ -104,22 +105,28 @@ class TestAuthViews:
         # 验证token的有效期
         access_token = response.data["data"]["access"]
         refresh_token = response.data["data"]["refresh"]
-        
+
         # 解码token
-        access_payload = decode(access_token, settings.SIMPLE_JWT["SIGNING_KEY"], algorithms=["HS256"])
-        refresh_payload = decode(refresh_token, settings.SIMPLE_JWT["SIGNING_KEY"], algorithms=["HS256"])
-        
+        access_payload = decode(
+            access_token, settings.SIMPLE_JWT["SIGNING_KEY"], algorithms=["HS256"]
+        )
+        refresh_payload = decode(
+            refresh_token, settings.SIMPLE_JWT["SIGNING_KEY"], algorithms=["HS256"]
+        )
+
         # 打印token的内容
         print("\nAccess token payload:", access_payload)
         print("Refresh token payload:", refresh_payload)
-        
+
         # 计算token的有效期（天数）
         access_lifetime = (access_payload["exp"] - access_payload["iat"]) / (24 * 3600)
-        refresh_lifetime = (refresh_payload["exp"] - refresh_payload["iat"]) / (24 * 3600)
-        
+        refresh_lifetime = (refresh_payload["exp"] - refresh_payload["iat"]) / (
+            24 * 3600
+        )
+
         print("Access token lifetime (days):", access_lifetime)
         print("Refresh token lifetime (days):", refresh_lifetime)
-        
+
         # 验证有效期是否符合预期（30天和60天）
         assert abs(access_lifetime - 30) < 0.1  # 允许0.1天的误差
         assert abs(refresh_lifetime - 60) < 0.1  # 允许0.1天的误差

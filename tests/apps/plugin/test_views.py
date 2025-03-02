@@ -1,6 +1,6 @@
-import allure
 from django.urls import reverse
 
+import allure
 import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -12,6 +12,7 @@ from apps.plugin.models import Plugin
 @allure.feature("插件操作")
 @pytest.mark.django_db
 @pytest.mark.integration
+@pytest.mark.plugin
 class TestPluginViews:
     @pytest.fixture
     def api_client(self):

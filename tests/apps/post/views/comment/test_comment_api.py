@@ -5,12 +5,13 @@ import pytest
 from rest_framework import status
 
 from apps.post.models import Comment, Post
-from tests.apps.post.factories import PostFactory, UserFactory, CommentFactory
+from tests.apps.post.factories import CommentFactory, PostFactory, UserFactory
 
 
 @allure.epic("评论管理")
 @allure.feature("文章评论")
 @pytest.mark.django_db
+@pytest.mark.comment
 class TestCommentAPI:
     @allure.story("评论列表")
     @allure.severity(allure.severity_level.NORMAL)
@@ -18,8 +19,10 @@ class TestCommentAPI:
     @pytest.mark.medium
     def test_list_comments(self, auth_client, post, comment):
         with allure.step("获取评论列表"):
-            response = auth_client.get(reverse("post:comment_list_create", args=[post.id]))
-            
+            response = auth_client.get(
+                reverse("post:comment_list_create", args=[post.id])
+            )
+
         with allure.step("验证响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -36,7 +39,7 @@ class TestCommentAPI:
             response = auth_client.post(
                 reverse("post:comment_list_create", args=[post.id]), data
             )
-            
+
         with allure.step("验证响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -52,7 +55,7 @@ class TestCommentAPI:
             response = auth_client.post(
                 reverse("post:comment_list_create", args=[999]), data
             )
-            
+
         with allure.step("验证响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 404
@@ -68,7 +71,7 @@ class TestCommentAPI:
             response = auth_client.post(
                 reverse("post:comment_list_create", args=[post.id]), data
             )
-            
+
         with allure.step("验证响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -85,7 +88,7 @@ class TestCommentAPI:
             response = auth_client.post(
                 reverse("post:comment_list_create", args=[post.id]), data
             )
-            
+
         with allure.step("验证响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 400
@@ -101,7 +104,7 @@ class TestCommentAPI:
             response = auth_client.post(
                 reverse("post:comment_list_create", args=[post.id]), data
             )
-            
+
         with allure.step("验证响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 400
@@ -117,7 +120,7 @@ class TestCommentAPI:
             response = auth_client.post(
                 reverse("post:comment_list_create", args=[post.id]), data
             )
-            
+
         with allure.step("验证响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 400
@@ -133,7 +136,7 @@ class TestCommentAPI:
             response = auth_client.post(
                 reverse("post:comment_list_create", args=[other_post.id]), data
             )
-            
+
         with allure.step("验证响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 400
@@ -149,7 +152,7 @@ class TestCommentAPI:
             response = auth_client.put(
                 reverse("post:comment_detail", args=[comment.id]), data
             )
-            
+
         with allure.step("验证响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -165,7 +168,7 @@ class TestCommentAPI:
             response = auth_client.put(
                 reverse("post:comment_detail", args=[other_user_comment.id]), data
             )
-            
+
         with allure.step("验证响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 403
@@ -177,8 +180,10 @@ class TestCommentAPI:
     @pytest.mark.high
     def test_delete_comment(self, auth_client, comment):
         with allure.step("删除评论"):
-            response = auth_client.delete(reverse("post:comment_detail", args=[comment.id]))
-            
+            response = auth_client.delete(
+                reverse("post:comment_detail", args=[comment.id])
+            )
+
         with allure.step("验证响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 200
@@ -193,7 +198,7 @@ class TestCommentAPI:
             response = auth_client.delete(
                 reverse("post:comment_detail", args=[other_user_comment.id])
             )
-            
+
         with allure.step("验证响应"):
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 403
@@ -221,7 +226,9 @@ class TestCommentAPI:
 
         with allure.step("测试更新评论"):
             data = {"content": "Updated comment"}
-            response = client.put(reverse("post:comment_detail", args=[comment.id]), data)
+            response = client.put(
+                reverse("post:comment_detail", args=[comment.id]), data
+            )
             assert response.status_code == status.HTTP_200_OK
             assert response.data["code"] == 401
             assert response.data["message"] == "未登录用户无法修改评论"

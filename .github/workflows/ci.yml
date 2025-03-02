@@ -71,6 +71,9 @@ jobs:
         run: |
           python -m pytest tests/ --alluredir=./allure-results --clean-alluredir
 
+      - name: Copy categories.json
+        run: cp categories.json ./allure-results/
+
       - name: Get Allure history
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         if: always()
